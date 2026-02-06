@@ -1,83 +1,69 @@
 import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
-import { supabase } from "../../lib/supabase";
+import { Link } from "react-router-dom";
 
-export default function Login() {
-  const navigate = useNavigate();
-
+export default function Register() {
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
-
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-
-    try {
-      // 1️⃣ Get email using username
-      const { data: profile, error: profileError } = await supabase
-        .from("profiles")
-        .select("email")
-        .eq("username", username)
-        .single();
-
-      if (profileError || !profile?.email) {
-        alert("Invalid username");
-        setLoading(false);
-        return;
-      }
-
-      // 2️⃣ Login with email + password
-      const { error: authError } = await supabase.auth.signInWithPassword({
-        email: profile.email,
-        password,
-      });
-
-      if (authError) {
-        alert(authError.message);
-        setLoading(false);
-        return;
-      }
-
-      navigate("/dashboard");
-    } catch (err) {
-      alert("Login failed");
-    } finally {
-      setLoading(false);
-    }
-  };
+  const [showPassword, setShowPassword] = useState(false);
 
   return (
     <div className="auth-page">
-      <form className="auth-card" onSubmit={handleLogin}>
-        <h2>Login</h2>
+      <div className="auth-card">
+        <h2>Create Account</h2>
 
         <input
-          type="text"
+          className="auth-input"
+          placeholder="First Name"
+          value={firstName}
+          onChange={(e) => setFirstName(e.target.value)}
+        />
+
+        <input
+          className="auth-input"
+          placeholder="Last Name"
+          value={lastName}
+          onChange={(e) => setLastName(e.target.value)}
+        />
+
+        <input
+          className="auth-input"
           placeholder="Username"
           value={username}
           onChange={(e) => setUsername(e.target.value)}
-          required
         />
 
         <input
-          type="password"
-          placeholder="Password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
+          className="auth-input"
+          placeholder="Email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
         />
 
-        <button type="submit" disabled={loading}>
-          {loading ? "Logging in..." : "Login"}
-        </button>
+        <div className="password-wrapper">
+          <input
+            className="auth-input"
+            type={showPassword ? "text" : "password"}
+            placeholder="Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+          <span
+            className="password-toggle"
+            onClick={() => setShowPassword(!showPassword)}
+          >
+            👁
+          </span>
+        </div>
 
-        {/* ✅ REGISTER LINK (THIS WAS MISSING) */}
-        <p className="auth-footer">
-          Don’t have an account?{" "}
-          <Link to="/register">Register</Link>
-        </p>
-      </form>
+        <button className="auth-button">Register</button>
+
+        <div className="auth-footer">
+          Already have an account? <Link to="/login">Login</Link>
+        </div>
+      </div>
     </div>
   );
 }

@@ -1,14 +1,27 @@
+import { useEffect, useState } from "react";
+import { useAuth } from "../../context/AuthContext";
+import { getProfile } from "../../lib/getProfile";
 
-import '../../index.css'
-export default function Driver(){
+export default function DriverDashboard() {
+  const { user } = useAuth();
+  const [profile, setProfile] = useState<any>(null);
+
+  useEffect(() => {
+    if (!user) return;
+    getProfile(user.id).then(setProfile);
+  }, [user]);
+
+  if (!profile) return null;
+
   return (
-    <div style={{padding:24}}>
-      <h2>Driver Dashboard</h2>
-      <div className="grid">
-        <div className="card">Current Trips</div>
-        <div className="card">Earnings</div>
-        <div className="card">Availability</div>
-      </div>
+    <div style={{ padding: 40 }}>
+      <h1>Driver Dashboard</h1>
+
+      <h3>Your Profile</h3>
+      <p>{profile.first_name} {profile.last_name}</p>
+      <p>Username: {profile.username}</p>
+      <p>Email: {profile.email}</p>
+      <p>Role: {profile.role}</p>
     </div>
-  )
+  );
 }

@@ -1,45 +1,47 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "../../lib/supabase";
+
 
 export default function Login() {
   const navigate = useNavigate();
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
     setLoading(true);
 
     try {
-      // 1. Find email using username
-      const { data: profile, error } = await supabase
+      // 1️⃣ Resolve username → email
+      const { data: profile, error: profileError } = await supabase
         .from("profiles")
         .select("email")
         .eq("username", username)
         .single();
 
-      if (error || !profile?.email) {
-        alert("Invalid username");
-        return;
+      if (profileError || !profile?.email) {
+        throw new Error("Invalid username");
       }
 
-      // 2. Login with email + password
-      const { error: authError } =
-        await supabase.auth.signInWithPassword({
-          email: profile.email,
-          password,
-        });
+      // 2️⃣ Login with email
+      const { error: authError } = await supabase.auth.signInWithPassword({
+        email: profile.email,
+        password,
+      });
 
       if (authError) {
-        alert(authError.message);
-        return;
+        throw authError;
       }
 
-      navigate("/dashboard");
+      // 3️⃣ Navigate AFTER successful login
+      navigate("/dashboard", { replace: true });
+    } catch (err: any) {
+      setError(err.message || "Login failed");
     } finally {
       setLoading(false);
     }
@@ -50,36 +52,30 @@ export default function Login() {
       <form className="auth-card" onSubmit={handleLogin}>
         <h2>Login</h2>
 
+        {error && <p className="error-text">{error}</p>}
+
         <input
+          type="text"
           placeholder="Username"
           value={username}
           onChange={(e) => setUsername(e.target.value)}
           required
         />
 
-        {/* PASSWORD WITH EYE */}
-        <div className="password-wrapper">
-          <input
-            type={showPassword ? "text" : "password"}
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-          />
-          <span
-            className="eye"
-            onClick={() => setShowPassword(!showPassword)}
-          >
-            {showPassword ? "🙈" : "👁️"}
-          </span>
-        </div>
+        <input
+          type="password"
+          placeholder="Password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          required
+        />
 
-        <button disabled={loading}>
+        <button type="submit" disabled={loading}>
           {loading ? "Logging in..." : "Login"}
         </button>
 
-        <p className="auth-footer">
-          Don’t have an account? <Link to="/register">Register</Link>
+        <p className="switch-auth">
+          No account? <Link to="/register">Register</Link>
         </p>
       </form>
     </div>

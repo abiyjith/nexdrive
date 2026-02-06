@@ -1,42 +1,63 @@
-import { Routes, Route, Navigate } from "react-router-dom";
-
-/* Auth pages */
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Login from "./pages/auth/Login";
 import Register from "./pages/auth/Register";
 
-/* Dashboards */
 import CustomerDashboard from "./pages/dashboards/Customer";
 import OwnerDashboard from "./pages/dashboards/Owner";
-import AdminDashboard from "./pages/dashboards/Admin";
 import DriverDashboard from "./pages/dashboards/Driver";
+import AdminDashboard from "./pages/dashboards/Admin";
 
-/* Common pages */
-import Home from "./pages/Home";
-import Rentals from "./pages/Rentals";
-import Payments from "./pages/Payments";
-import AvailableDrivers from "./pages/AvailableDrivers";
+import ProtectedRoute from "./routes/ProtectedRoute";
+import { AuthProvider } from "./context/AuthContext";
 
 export default function App() {
   return (
-    <Routes>
-      {/* ================= PUBLIC ROUTES ================= */}
-      <Route path="/login" element={<Login />} />
-      <Route path="/register" element={<Register />} />
+    <BrowserRouter>
+      <AuthProvider>
+        <Routes>
+          {/* PUBLIC */}
+          <Route path="/" element={<Navigate to="/login" replace />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
 
-      {/* ================= COMMON ROUTES ================= */}
-      <Route path="/home" element={<Home />} />
-      <Route path="/rentals" element={<Rentals />} />
-      <Route path="/payments" element={<Payments />} />
-      <Route path="/drivers" element={<AvailableDrivers />} />
+          {/* PROTECTED */}
+          <Route
+            path="/customer"
+            element={
+              <ProtectedRoute allowedRoles={["customer"]}>
+                <CustomerDashboard />
+              </ProtectedRoute>
+            }
+          />
 
-      {/* ================= DASHBOARDS ================= */}
-      <Route path="/customer" element={<CustomerDashboard />} />
-      <Route path="/owner" element={<OwnerDashboard />} />
-      <Route path="/admin" element={<AdminDashboard />} />
-      <Route path="/driver" element={<DriverDashboard />} />
+          <Route
+            path="/owner"
+            element={
+              <ProtectedRoute allowedRoles={["owner"]}>
+                <OwnerDashboard />
+              </ProtectedRoute>
+            }
+          />
 
-      {/* ================= FALLBACK ================= */}
-      <Route path="*" element={<Navigate to="/login" replace />} />
-    </Routes>
+          <Route
+            path="/driver"
+            element={
+              <ProtectedRoute allowedRoles={["driver"]}>
+                <DriverDashboard />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/admin"
+            element={
+              <ProtectedRoute allowedRoles={["admin"]}>
+                <AdminDashboard />
+              </ProtectedRoute>
+            }
+          />
+        </Routes>
+      </AuthProvider>
+    </BrowserRouter>
   );
 }

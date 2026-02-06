@@ -3,45 +3,48 @@ import { supabase } from "../lib/supabase";
 
 const AuthContext = createContext<any>(null);
 
-export const AuthProvider = ({ children }: any) => {
+export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<any>(null);
-  const [profile, setProfile] = useState<any>(null);
+  const [role, setRole] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const loadProfile = async (u: any) => {
-    const { data } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("user_id", u.id)
-      .single();
-    setProfile(data);
-  };
-
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      if (data.session?.user) {
-        setUser(data.session.user);
-        loadProfile(data.session.user);
-      }
-      setLoading(false);
-    });
+    const loadUser = async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
 
-    supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {
         setUser(session.user);
-        loadProfile(session.user);
-      } else {
-        setUser(null);
-        setProfile(null);
+
+        const { data } = await supabase
+          .from("profiles")
+          .select("role")
+          .eq("user_id", session.user.id)
+          .single();
+
+        setRole(data?.role ?? "customer");
       }
-    });
+
+      setLoading(false);
+    };
+
+    loadUser();
+
+    const { data: listener } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        setUser(session?.user ?? null);
+      }
+    );
+
+    return () => listener.subscription.unsubscribe();
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, profile, loading }}>
+    <AuthContext.Provider value={{ user, role, loading }}>
       {children}
     </AuthContext.Provider>
   );
-};
+}
 
 export const useAuth = () => useContext(AuthContext);
