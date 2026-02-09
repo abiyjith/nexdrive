@@ -1,45 +1,35 @@
-import { useEffect, useState } from "react";
+import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { supabase } from "../../lib/supabase";
 
-export default function AdminDashboard() {
-  const [requests, setRequests] = useState<any[]>([]);
+export default function AdminLayout() {
+  const navigate = useNavigate();
 
-  useEffect(() => {
-    const load = async () => {
-      const { data } = await supabase
-        .from("role_requests")
-        .select("*");
-      setRequests(data || []);
-    };
-    load();
-  }, []);
-
-  const approve = async (req: any) => {
-    await supabase
-      .from("profiles")
-      .update({ role: req.requested_role })
-      .eq("user_id", req.user_id);
-
-    await supabase
-      .from("role_requests")
-      .delete()
-      .eq("id", req.id);
-
-    setRequests(requests.filter(r => r.id !== req.id));
+  const logout = async () => {
+    await supabase.auth.signOut();
+    localStorage.clear();
+    navigate("/login");
   };
 
   return (
-    <div style={{ padding: 24 }}>
-      <h2>Admin Dashboard</h2>
+    <div style={{ minHeight: "100vh", background: "black", color: "white" }}>
+      <nav style={{
+        display: "flex",
+        gap: "20px",
+        padding: "15px 30px",
+        borderBottom: "2px solid yellow"
+      }}>
+        <NavLink to="requests">Requests</NavLink>
+        <NavLink to="users">Users</NavLink>
+        <NavLink to="drivers">Drivers</NavLink>
+        <NavLink to="vehicles">Vehicles</NavLink>
+        <button onClick={logout} style={{ marginLeft: "auto" }}>
+          Logout
+        </button>
+      </nav>
 
-      {requests.map(r => (
-        <div key={r.id}>
-          <p>User: {r.user_id}</p>
-          <p>Requested Role: {r.requested_role}</p>
-          <button onClick={() => approve(r)}>Approve</button>
-          <hr />
-        </div>
-      ))}
+      <div style={{ padding: "30px" }}>
+        <Outlet />
+      </div>
     </div>
   );
 }

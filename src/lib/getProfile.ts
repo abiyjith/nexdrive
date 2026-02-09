@@ -1,12 +1,27 @@
 import { supabase } from "./supabase";
 
-export async function getProfile(userId: string) {
+export async function getProfile() {
+  // Get logged-in user
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError || !user) {
+    return null;
+  }
+
+  // Fetch profile using user_id (matches your schema)
   const { data, error } = await supabase
     .from("profiles")
-    .select("first_name, last_name, username, email, role")
-    .eq("user_id", userId)
+    .select("*")
+    .eq("user_id", user.id)
     .single();
 
-  if (error) throw error;
+  if (error) {
+    console.error("Error fetching profile:", error.message);
+    return null;
+  }
+
   return data;
 }

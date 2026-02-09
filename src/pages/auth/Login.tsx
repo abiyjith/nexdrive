@@ -1,13 +1,14 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "../../lib/supabase";
-
+import { getProfile } from "../../lib/getProfile";
 
 export default function Login() {
   const navigate = useNavigate();
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -16,68 +17,100 @@ export default function Login() {
     setError(null);
     setLoading(true);
 
-    try {
-      // 1️⃣ Resolve username → email
-      const { data: profile, error: profileError } = await supabase
-        .from("profiles")
-        .select("email")
-        .eq("username", username)
-        .single();
+    /* 1️⃣ Get email using username */
+    const { data: profile, error: profileError } = await supabase
+      .from("profiles")
+      .select("email")
+      .eq("username", username)
+      .single();
 
-      if (profileError || !profile?.email) {
-        throw new Error("Invalid username");
-      }
+    if (profileError || !profile) {
+      setLoading(false);
+      setError("Invalid username or password");
+      return;
+    }
 
-      // 2️⃣ Login with email
-      const { error: authError } = await supabase.auth.signInWithPassword({
+    /* 2️⃣ Login using email + password */
+    const { error: loginError } =
+      await supabase.auth.signInWithPassword({
         email: profile.email,
         password,
       });
 
-      if (authError) {
-        throw authError;
-      }
-
-      // 3️⃣ Navigate AFTER successful login
-      navigate("/dashboard", { replace: true });
-    } catch (err: any) {
-      setError(err.message || "Login failed");
-    } finally {
+    if (loginError) {
       setLoading(false);
+      setError("Invalid username or password");
+      return;
+    }
+
+    /* 3️⃣ Fetch full profile */
+    const fullProfile = await getProfile();
+
+    if (!fullProfile) {
+      setLoading(false);
+      setError("Unable to fetch user profile");
+      return;
+    }
+
+    /* 4️⃣ Save role for route protection */
+    localStorage.setItem("role", fullProfile.role);
+
+    setLoading(false);
+
+    /* 5️⃣ Navigate based on role */
+    if (fullProfile.role === "admin") {
+      navigate("/admin");
+    } else {
+      navigate("/customer");
     }
   };
 
   return (
     <div className="auth-page">
-      <form className="auth-card" onSubmit={handleLogin}>
+      <div className="auth-card">
         <h2>Login</h2>
 
-        {error && <p className="error-text">{error}</p>}
+        <form onSubmit={handleLogin}>
+          <input
+            className="auth-input"
+            type="text"
+            placeholder="Username"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            required
+          />
 
-        <input
-          type="text"
-          placeholder="Username"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-          required
-        />
+          <div className="password-wrapper">
+            <input
+              className="auth-input"
+              type={showPassword ? "text" : "password"}
+              placeholder="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
 
-        <input
-          type="password"
-          placeholder="Password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-        />
+            {/* 👁 Eye toggle */}
+            <span
+              className="password-toggle"
+              onClick={() => setShowPassword(!showPassword)}
+              style={{ cursor: "pointer" }}
+            >
+              👁
+            </span>
+          </div>
 
-        <button type="submit" disabled={loading}>
-          {loading ? "Logging in..." : "Login"}
-        </button>
+          {error && <p style={{ color: "red" }}>{error}</p>}
 
-        <p className="switch-auth">
-          No account? <Link to="/register">Register</Link>
+          <button className="auth-button" type="submit" disabled={loading}>
+            {loading ? "Logging in..." : "Login"}
+          </button>
+        </form>
+
+        <p>
+          Don’t have an account? <Link to="/register">Register</Link>
         </p>
-      </form>
+      </div>
     </div>
   );
 }

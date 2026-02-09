@@ -1,18 +1,22 @@
-import { Navigate } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
+import { Navigate, Outlet } from "react-router-dom";
 
-export default function ProtectedRoute({
-  children,
-  allowedRoles,
-}: {
-  children: JSX.Element;
-  allowedRoles: string[];
-}) {
-  const { user, role, loading } = useAuth();
+interface ProtectedRouteProps {
+  roleRequired?: string;
+}
 
-  if (loading) return null;
-  if (!user) return <Navigate to="/login" replace />;
-  if (!allowedRoles.includes(role)) return <Navigate to="/login" replace />;
+export default function ProtectedRoute({ roleRequired }: ProtectedRouteProps) {
+  const role = localStorage.getItem("role");
 
-  return children;
+  // ❌ Not logged in
+  if (!role) {
+    return <Navigate to="/login" replace />;
+  }
+
+  // ❌ Logged in but wrong role (admin protection)
+  if (roleRequired && role !== roleRequired) {
+    return <Navigate to="/login" replace />;
+  }
+
+  // ✅ Authorized → allow nested routes
+  return <Outlet />;
 }
