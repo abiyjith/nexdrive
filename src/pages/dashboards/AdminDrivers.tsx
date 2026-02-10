@@ -5,21 +5,31 @@ export default function AdminDrivers() {
   const [drivers, setDrivers] = useState<any[]>([]);
 
   useEffect(() => {
-    supabase.from("profiles")
-      .select("*")
-      .eq("role", "driver")
-      .then(({ data }) => setDrivers(data || []));
+    loadDrivers();
   }, []);
 
+  async function loadDrivers() {
+    const { data } = await supabase
+      .from("profiles")
+      .select("user_id, username, email")
+      .eq("is_driver", true);
+
+    setDrivers(data || []);
+  }
+
   return (
-    <>
+    <div className="admin-page">
       <h2>Drivers</h2>
-      {drivers.map(d => (
-        <div key={d.user_id} className="profile-card">
-          <p>{d.username}</p>
-          <p>{d.email}</p>
+
+      {drivers.length === 0 && <p>No drivers registered.</p>}
+
+      {drivers.map((d) => (
+        <div key={d.user_id} className="card">
+          <p><b>Username:</b> {d.username}</p>
+          <p><b>Email:</b> {d.email}</p>
+          <p><b>Status:</b> Approved Driver</p>
         </div>
       ))}
-    </>
+    </div>
   );
 }

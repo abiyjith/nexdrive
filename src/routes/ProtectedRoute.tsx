@@ -1,22 +1,41 @@
-import { Navigate, Outlet } from "react-router-dom";
+import { Navigate } from "react-router-dom";
+import { supabase } from "../lib/supabase";
+import { useEffect, useState } from "react";
 
-interface ProtectedRouteProps {
-  roleRequired?: string;
-}
+export default function ProtectedRoute({ children }: any) {
+  const [allowed, setAllowed] = useState<boolean | null>(null);
 
-export default function ProtectedRoute({ roleRequired }: ProtectedRouteProps) {
-  const role = localStorage.getItem("role");
+  useEffect(() => {
+    checkUser();
+  }, []);
 
-  // ❌ Not logged in
-  if (!role) {
-    return <Navigate to="/login" replace />;
+  async function checkUser() {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      setAllowed(false);
+      return;
+    }
+
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("is_banned")
+      .eq("user_id", user.id)
+      .single();
+
+    if (profile?.is_banned) {
+      alert("Your account has been banned.");
+      await supabase.auth.signOut();
+      setAllowed(false);
+      return;
+    }
+
+    setAllowed(true);
   }
 
-  // ❌ Logged in but wrong role (admin protection)
-  if (roleRequired && role !== roleRequired) {
-    return <Navigate to="/login" replace />;
-  }
+  if (allowed === null) return null;
 
-  // ✅ Authorized → allow nested routes
-  return <Outlet />;
+  return allowed ? children : <Navigate to="/login" />;
 }

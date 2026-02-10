@@ -22,6 +22,7 @@ export default function AdminLayout() {
         <NavLink to="users">Users</NavLink>
         <NavLink to="drivers">Drivers</NavLink>
         <NavLink to="vehicles">Vehicles</NavLink>
+        <NavLink to="/admin/reports">Reports</NavLink>
         <button onClick={logout} style={{ marginLeft: "auto" }}>
           Logout
         </button>

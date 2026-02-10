@@ -1,95 +1,122 @@
-/* ===== GLOBAL RESET ===== */
+/* ========== GLOBAL THEME ========== */
 * {
   box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-  font-family: "Segoe UI", system-ui, sans-serif;
 }
 
 body {
+  margin: 0;
+  font-family: "Segoe UI", sans-serif;
   background: #0b0b0b;
-  color: #fff;
-  min-height: 100vh;
+  color: #ffffff;
 }
 
-/* ===== AUTH PAGE LAYOUT ===== */
-.auth-page {
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+/* ========== HEADINGS ========== */
+h1, h2, h3 {
+  color: #f1c40f;
+  margin-bottom: 10px;
 }
 
-/* ===== AUTH CARD ===== */
-.auth-card {
-  width: 380px;
-  background: #141414;
-  border-radius: 14px;
-  padding: 28px;
-  box-shadow: 0 0 40px rgba(0, 0, 0, 0.8);
-}
-
-.auth-card h2 {
-  text-align: center;
-  margin-bottom: 22px;
-  font-size: 24px;
-}
-
-/* ===== INPUTS ===== */
-.auth-card input {
+/* ========== INPUTS ========== */
+input, select, textarea {
   width: 100%;
-  padding: 12px;
-  margin-bottom: 14px;
-  background: #222;
-  border: 1px solid #333;
-  border-radius: 8px;
-  color: #fff;
-  font-size: 14px;
-}
-
-.auth-card input:focus {
-  outline: none;
-  border-color: #facc15;
-}
-
-/* ===== BUTTON ===== */
-.auth-card button {
-  width: 100%;
-  padding: 12px;
-  background: #facc15;
-  border: none;
-  border-radius: 8px;
-  font-weight: 600;
-  cursor: pointer;
-  color: #000;
-  font-size: 15px;
-}
-
-.auth-card button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-/* ===== ERROR ===== */
-.error-text {
-  color: #ff6b6b;
-  text-align: center;
+  padding: 10px;
   margin-bottom: 12px;
-  font-size: 14px;
+  border-radius: 6px;
+  border: 1px solid #333;
+  background: #111;
+  color: #fff;
 }
 
-/* ===== SWITCH LINK ===== */
-.switch-auth {
-  margin-top: 16px;
-  text-align: center;
-  font-size: 14px;
+input:focus, textarea:focus, select:focus {
+  outline: none;
+  border-color: #f1c40f;
 }
 
-.switch-auth a {
-  color: #facc15;
-  text-decoration: none;
+/* ========== BUTTONS ========== */
+button {
+  background: #f1c40f;
+  color: #000;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 6px;
+  font-weight: bold;
+  cursor: pointer;
 }
 
-.switch-auth a:hover {
-  text-decoration: underline;
+button:hover {
+  opacity: 0.9;
+}
+
+button.danger {
+  background: #e74c3c;
+  color: #fff;
+}
+
+/* ========== LAYOUT ========== */
+.page {
+  padding: 30px;
+  max-width: 1200px;
+  margin: auto;
+}
+
+/* ========== CARDS ========== */
+.card {
+  background: #111;
+  border-radius: 10px;
+  padding: 18px;
+  border: 1px solid #222;
+  margin-bottom: 20px;
+}
+
+/* ========== GRID ========== */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px;
+}
+
+/* ========== STATUS BADGES ========== */
+.badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.badge.pending {
+  background: orange;
+  color: #000;
+}
+
+.badge.approved {
+  background: #2ecc71;
+  color: #000;
+}
+
+.badge.rejected {
+  background: #e74c3c;
+  color: #fff;
+}
+
+/* ========== ALERTS ========== */
+.alert {
+  padding: 12px;
+  border-radius: 6px;
+  margin-bottom: 15px;
+}
+
+.alert.success {
+  background: rgba(46, 204, 113, 0.15);
+  border-left: 5px solid #2ecc71;
+}
+
+.alert.error {
+  background: rgba(231, 76, 60, 0.15);
+  border-left: 5px solid #e74c3c;
+}
+
+.alert.info {
+  background: rgba(52, 152, 219, 0.15);
+  border-left: 5px solid #3498db;
 }

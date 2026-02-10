@@ -1,27 +1,23 @@
 import { supabase } from "./supabase";
 
 export async function getProfile() {
-  // Get logged-in user
   const {
     data: { user },
-    error: userError,
   } = await supabase.auth.getUser();
 
-  if (userError || !user) {
-    return null;
-  }
+  if (!user) return null;
 
-  // Fetch profile using user_id (matches your schema)
   const { data, error } = await supabase
     .from("profiles")
     .select("*")
     .eq("user_id", user.id)
     .single();
 
-  if (error) {
-    console.error("Error fetching profile:", error.message);
-    return null;
-  }
+  if (error) return null;
 
-  return data;
+  // 🔥 FORCE single role source
+  return {
+    ...data,
+    active_role: data.role,
+  };
 }
