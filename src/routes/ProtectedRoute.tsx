@@ -1,41 +1,61 @@
-import { Navigate } from "react-router-dom";
+import { Navigate, Outlet } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import { useEffect, useState } from "react";
 
-export default function ProtectedRoute({ children }: any) {
-  const [allowed, setAllowed] = useState<boolean | null>(null);
+type Props = {
+  roleRequired?: "admin" | "owner" | "customer" | "driver";
+};
+
+export default function ProtectedRoute({ roleRequired }: Props) {
+  const [status, setStatus] = useState<
+    "loading" | "allowed" | "denied"
+  >("loading");
 
   useEffect(() => {
-    checkUser();
-  }, []);
+    const check = async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
 
-  async function checkUser() {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+      if (!session) {
+        setStatus("denied");
+        return;
+      }
 
-    if (!user) {
-      setAllowed(false);
-      return;
-    }
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("active_role, is_banned")
+        .eq("user_id", session.user.id)
+        .single();
 
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("is_banned")
-      .eq("user_id", user.id)
-      .single();
+      if (!profile || profile.is_banned) {
+        await supabase.auth.signOut();
+        setStatus("denied");
+        return;
+      }
 
-    if (profile?.is_banned) {
-      alert("Your account has been banned.");
-      await supabase.auth.signOut();
-      setAllowed(false);
-      return;
-    }
+      if (roleRequired && profile.active_role !== roleRequired) {
+        setStatus("denied");
+        return;
+      }
 
-    setAllowed(true);
+      setStatus("allowed");
+    };
+
+    check();
+  }, [roleRequired]);
+
+  if (status === "loading") {
+    return (
+      <div style={{ color: "white", textAlign: "center", marginTop: "30vh" }}>
+        Loading...
+      </div>
+    );
   }
 
-  if (allowed === null) return null;
-
-  return allowed ? children : <Navigate to="/login" />;
+  return status === "allowed" ? (
+    <Outlet />
+  ) : (
+    <Navigate to="/login" replace />
+  );
 }

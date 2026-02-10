@@ -4,7 +4,7 @@ import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import Login from "./pages/auth/Login";
 import Register from "./pages/auth/Register";
 
-/* ROLE REDIRECT */
+/* REDIRECT */
 import RoleRedirect from "./routes/RoleRedirect";
 
 /* CUSTOMER */
@@ -32,15 +32,15 @@ import AdminDrivers from "./pages/dashboards/AdminDrivers";
 import AdminVehicles from "./pages/dashboards/AdminVehicles";
 import AdminReports from "./pages/dashboards/AdminReports";
 
-/* PROTECTED ROUTE */
+/* GUARD */
 import ProtectedRoute from "./routes/ProtectedRoute";
 
-function App() {
+export default function App() {
   return (
     <Router>
       <Routes>
 
-        {/* 🔐 ENTRY POINT DECIDES ROLE */}
+        {/* ENTRY */}
         <Route path="/" element={<RoleRedirect />} />
 
         {/* PUBLIC */}
@@ -50,6 +50,7 @@ function App() {
         {/* CUSTOMER / DRIVER */}
         <Route element={<ProtectedRoute />}>
           <Route path="/customer" element={<CustomerLayout />}>
+            <Route index element={<CustomerHome />} />
             <Route path="home" element={<CustomerHome />} />
             <Route path="drivers" element={<Drivers />} />
             <Route path="vehicles" element={<Vehicles />} />
@@ -89,5 +90,3 @@ function App() {
     </Router>
   );
 }
-
-export default App;

@@ -3,31 +3,65 @@ import { supabase } from "../lib/supabase";
 import { useEffect, useState } from "react";
 import "../styles/customer.css";
 
+type Role = "customer" | "driver";
+
 export default function CustomerLayout() {
   const navigate = useNavigate();
-  const [activeRole, setActiveRole] = useState<"customer" | "driver">("customer");
+  const [activeRole, setActiveRole] = useState<Role>("customer");
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const role = localStorage.getItem("active_role");
+    const initRole = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
 
-    // 🚨 HARD BLOCK: owner must never see customer layout
-    if (role === "owner") {
-      navigate("/owner/dashboard", { replace: true });
-      return;
-    }
+      if (!user) {
+        navigate("/login", { replace: true });
+        return;
+      }
 
-    if (role === "driver") {
-      setActiveRole("driver");
-    } else {
-      setActiveRole("customer");
-    }
+      // Always trust DB over localStorage
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("active_role")
+        .eq("user_id", user.id)
+        .single();
+
+      const role = profile?.active_role;
+
+      // 🚨 HARD BLOCKS
+      if (role === "owner") {
+        navigate("/owner/dashboard", { replace: true });
+        return;
+      }
+
+      if (role === "admin") {
+        navigate("/admin", { replace: true });
+        return;
+      }
+
+      if (role === "driver") {
+        setActiveRole("driver");
+        localStorage.setItem("active_role", "driver");
+      } else {
+        setActiveRole("customer");
+        localStorage.setItem("active_role", "customer");
+      }
+
+      setLoading(false);
+    };
+
+    initRole();
   }, [navigate]);
 
   const logout = async () => {
     await supabase.auth.signOut();
     localStorage.clear();
-    navigate("/login");
+    navigate("/login", { replace: true });
   };
+
+  if (loading) return null; // prevents navbar flicker
 
   return (
     <div className="customer-root">
