@@ -6,15 +6,17 @@
   justify-content: center;
 }
 
+/* CARD */
 .auth-card {
   background: #111;
   padding: 30px;
   border-radius: 10px;
-  width: 350px;
+  width: 350px; /* FIXED WIDTH — NO STRETCH */
   color: white;
   box-shadow: 0 0 15px rgba(255, 255, 0, 0.2);
 }
 
+/* TITLES */
 .auth-title {
   color: yellow;
   text-align: center;
@@ -27,22 +29,28 @@
   margin-bottom: 20px;
 }
 
-.auth-field {
-  margin-bottom: 15px;
-}
-
-.auth-field input {
+/* INPUTS */
+.auth-card input {
   width: 100%;
   padding: 10px;
   border-radius: 6px;
   border: none;
+  margin-bottom: 15px;
+  background: #000;
+  color: white;
 }
 
-.password-field {
+/* PASSWORD FIELD (MATCH JSX) */
+.password-wrapper {
   position: relative;
 }
 
-.eye-icon {
+.password-wrapper input {
+  padding-right: 40px;
+}
+
+/* EYE ICON (MATCH JSX) */
+.eye {
   position: absolute;
   right: 10px;
   top: 50%;
@@ -51,7 +59,9 @@
   color: #ccc;
 }
 
-.auth-btn {
+/* BUTTON */
+.auth-btn,
+.auth-card button {
   width: 100%;
   background: yellow;
   color: black;
@@ -62,12 +72,14 @@
   border-radius: 6px;
 }
 
+/* ERROR */
 .auth-error {
   color: red;
   font-size: 14px;
   margin-bottom: 10px;
 }
 
+/* FOOTER */
 .auth-footer {
   text-align: center;
   margin-top: 15px;

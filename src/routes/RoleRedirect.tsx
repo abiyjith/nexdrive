@@ -4,40 +4,55 @@ import { supabase } from "../lib/supabase";
 
 export default function RoleRedirect() {
   const [loading, setLoading] = useState(true);
-  const [destination, setDestination] = useState<string | null>(null);
+  const [redirectTo, setRedirectTo] = useState<string | null>(null);
 
   useEffect(() => {
-    const resolveRole = async () => {
+    const resolve = async () => {
       const {
         data: { session },
       } = await supabase.auth.getSession();
 
-      // 🚫 NOT LOGGED IN
-      if (!session) {
-        setDestination("/login");
+      // Not logged in
+      if (!session?.user) {
+        setRedirectTo("/login");
         setLoading(false);
         return;
       }
 
-      const role = localStorage.getItem("active_role");
+      // Load profile
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("active_role")
+        .eq("user_id", session.user.id)
+        .single();
 
-      if (role === "admin") setDestination("/admin");
-      else if (role === "owner") setDestination("/owner/dashboard");
-      else setDestination("/customer/home");
+      if (!profile) {
+        setRedirectTo("/login");
+        setLoading(false);
+        return;
+      }
+
+      // Role-based redirect
+      switch (profile.active_role) {
+        case "admin":
+          setRedirectTo("/admin");
+          break;
+        case "owner":
+          setRedirectTo("/owner/dashboard");
+          break;
+        case "driver":
+        case "customer":
+        default:
+          setRedirectTo("/customer/dashboard");
+      }
 
       setLoading(false);
     };
 
-    resolveRole();
+    resolve();
   }, []);
 
-  if (loading) {
-    return (
-      <div style={{ color: "white", textAlign: "center", marginTop: "30vh" }}>
-        Loading...
-      </div>
-    );
-  }
+  if (loading) return null;
 
-  return <Navigate to={destination!} replace />;
+  return redirectTo ? <Navigate to={redirectTo} replace /> : null;
 }

@@ -1,61 +1,43 @@
 import { Navigate, Outlet } from "react-router-dom";
-import { supabase } from "../lib/supabase";
 import { useEffect, useState } from "react";
+import { supabase } from "../lib/supabase";
 
-type Props = {
-  roleRequired?: "admin" | "owner" | "customer" | "driver";
-};
-
-export default function ProtectedRoute({ roleRequired }: Props) {
-  const [status, setStatus] = useState<
-    "loading" | "allowed" | "denied"
-  >("loading");
+export default function ProtectedRoute({ roleRequired }: { roleRequired?: string }) {
+  const [loading, setLoading] = useState(true);
+  const [profile, setProfile] = useState<any>(null);
 
   useEffect(() => {
-    const check = async () => {
+    const load = async () => {
       const {
         data: { session },
       } = await supabase.auth.getSession();
 
-      if (!session) {
-        setStatus("denied");
+      if (!session?.user) {
+        setLoading(false);
         return;
       }
 
-      const { data: profile } = await supabase
+      const { data } = await supabase
         .from("profiles")
-        .select("active_role, is_banned")
+        .select("*")
         .eq("user_id", session.user.id)
         .single();
 
-      if (!profile || profile.is_banned) {
-        await supabase.auth.signOut();
-        setStatus("denied");
-        return;
-      }
-
-      if (roleRequired && profile.active_role !== roleRequired) {
-        setStatus("denied");
-        return;
-      }
-
-      setStatus("allowed");
+      setProfile(data);
+      setLoading(false);
     };
 
-    check();
-  }, [roleRequired]);
+    load();
+  }, []);
 
-  if (status === "loading") {
-    return (
-      <div style={{ color: "white", textAlign: "center", marginTop: "30vh" }}>
-        Loading...
-      </div>
-    );
+  // ⛔ CRITICAL: DO NOTHING WHILE LOADING
+  if (loading) return null;
+
+  if (!profile) return <Navigate to="/login" replace />;
+
+  if (roleRequired && profile.active_role !== roleRequired) {
+    return <Navigate to="/" replace />;
   }
 
-  return status === "allowed" ? (
-    <Outlet />
-  ) : (
-    <Navigate to="/login" replace />
-  );
+  return <Outlet />;
 }

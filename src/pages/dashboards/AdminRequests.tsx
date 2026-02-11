@@ -1,133 +1,202 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabase";
 
+type RoleRequest = {
+  id: string;
+  user_id: string;
+  requested_role: "driver" | "owner";
+  status: "pending" | "approved" | "rejected";
+  admin_note: string | null;
+  license_url: string | null;
+  profiles?: {
+    username: string;
+    email: string;
+  } | null;
+};
+
 export default function AdminRequests() {
-  const [requests, setRequests] = useState<any[]>([]);
-  const [stats, setStats] = useState({
-    users: 0,
-    drivers: 0,
-    owners: 0,
-    pending: 0,
-  });
-  const [loading, setLoading] = useState(true);
+  const [requests, setRequests] = useState<RoleRequest[]>([]);
+  const [noteMap, setNoteMap] = useState<Record<string, string>>({});
 
-  useEffect(() => {
-    loadAll();
-  }, []);
-
-  const loadAll = async () => {
-    setLoading(true);
-
-    // Fetch stats
-    const { count: users } = await supabase
-      .from("profiles")
-      .select("*", { count: "exact", head: true });
-
-    const { count: drivers } = await supabase
-      .from("profiles")
-      .select("*", { count: "exact", head: true })
-      .eq("is_driver", true);
-
-    const { count: owners } = await supabase
-      .from("profiles")
-      .select("*", { count: "exact", head: true })
-      .eq("is_owner", true);
-
-    const { count: pending } = await supabase
-      .from("role_requests")
-      .select("*", { count: "exact", head: true })
-      .eq("status", "pending");
-
-    setStats({
-      users: users || 0,
-      drivers: drivers || 0,
-      owners: owners || 0,
-      pending: pending || 0,
-    });
-
-    // Fetch pending requests
-    const { data } = await supabase
+  const loadRequests = async () => {
+    // 1️⃣ Load role requests
+    const { data: roleRequests, error } = await supabase
       .from("role_requests")
       .select("*")
-      .eq("status", "pending");
+      .order("created_at", { ascending: false });
 
-    setRequests(data || []);
-    setLoading(false);
-  };
-
-  const approve = async (r: any) => {
-    const updates: any = {};
-
-    if (r.requested_role === "driver") {
-      updates.is_driver = true;
-      updates.active_role = "driver";
+    if (error || !roleRequests || roleRequests.length === 0) {
+      setRequests([]);
+      return;
     }
 
-    if (r.requested_role === "owner") {
-      updates.is_owner = true;
-      updates.active_role = "owner";
-    }
+    // 2️⃣ Load related profiles
+    const userIds = roleRequests.map((r) => r.user_id);
 
-    await supabase
+    const { data: profiles } = await supabase
       .from("profiles")
-      .update(updates)
-      .eq("user_id", r.user_id);
+      .select("user_id, username, email")
+      .in("user_id", userIds);
 
-    await supabase
-      .from("role_requests")
-      .update({ status: "approved" })
-      .eq("id", r.id);
+    const profileMap: Record<string, any> = {};
+    profiles?.forEach((p) => {
+      profileMap[p.user_id] = p;
+    });
 
-    loadAll();
+    // 3️⃣ Merge
+    const merged = roleRequests.map((r) => ({
+      ...r,
+      profiles: profileMap[r.user_id] || null,
+    }));
+
+    setRequests(merged);
   };
 
-  const reject = async (id: string) => {
+  useEffect(() => {
+    loadRequests();
+  }, []);
+
+  // ✅ APPROVE REQUEST
+  const approveRequest = async (req: RoleRequest) => {
+    // Update request
     await supabase
       .from("role_requests")
-      .update({ status: "rejected" })
-      .eq("id", id);
+      .update({ status: "approved", admin_note: null })
+      .eq("id", req.id);
 
-    loadAll();
+    // Update profile + activate role
+    if (req.requested_role === "driver") {
+      await supabase
+        .from("profiles")
+        .update({
+          is_driver: true,
+          active_role: "driver",
+        })
+        .eq("user_id", req.user_id);
+    }
+
+    if (req.requested_role === "owner") {
+      await supabase
+        .from("profiles")
+        .update({
+          is_owner: true,
+          active_role: "owner",
+        })
+        .eq("user_id", req.user_id);
+    }
+
+    loadRequests();
+  };
+
+  // ❌ REJECT REQUEST
+  const rejectRequest = async (req: RoleRequest) => {
+    const note = noteMap[req.id] || "Request rejected";
+
+    await supabase
+      .from("role_requests")
+      .update({
+        status: "rejected",
+        admin_note: note,
+      })
+      .eq("id", req.id);
+
+    loadRequests();
   };
 
   return (
-    <>
-      <h2>Admin Dashboard</h2>
+    <div style={{ padding: "20px" }}>
+      <h2 style={{ color: "#facc15" }}>Role Requests</h2>
 
-      {/* ================= ANALYTICS ================= */}
-      <div style={{ display: "flex", gap: "20px", marginBottom: "30px" }}>
-        <div className="profile-card">👥 Users<br /><b>{stats.users}</b></div>
-        <div className="profile-card">🚗 Drivers<br /><b>{stats.drivers}</b></div>
-        <div className="profile-card">🏠 Owners<br /><b>{stats.owners}</b></div>
-        <div className="profile-card">⏳ Pending Requests<br /><b>{stats.pending}</b></div>
-      </div>
-
-      {/* ================= REQUESTS ================= */}
-      <h3>Role Change Requests</h3>
-
-      {loading && <p>Loading...</p>}
-
-      {!loading && requests.length === 0 && (
-        <p>No pending role requests.</p>
-      )}
+      {requests.length === 0 && <p>No requests found.</p>}
 
       {requests.map((r) => (
-        <div key={r.id} className="profile-card">
-          <p><b>User ID:</b> {r.user_id}</p>
+        <div
+          key={r.id}
+          style={{
+            border: "1px solid #444",
+            borderRadius: "8px",
+            padding: "12px",
+            marginBottom: "12px",
+            background: "#111",
+          }}
+        >
+          <p><b>User:</b> {r.profiles?.username || "—"}</p>
+          <p><b>Email:</b> {r.profiles?.email || "—"}</p>
           <p><b>Requested Role:</b> {r.requested_role}</p>
+          <p><b>Status:</b> {r.status}</p>
 
           {r.license_url && (
             <p>
-              <a href={r.license_url} target="_blank" rel="noreferrer">
+              <a
+                href={r.license_url}
+                target="_blank"
+                rel="noreferrer"
+                style={{ color: "#facc15" }}
+              >
                 View License
               </a>
             </p>
           )}
 
-          <button onClick={() => approve(r)}>Approve</button>
-          <button onClick={() => reject(r.id)}>Reject</button>
+          {r.status === "pending" && (
+            <>
+              <textarea
+                placeholder="Admin note (optional)"
+                value={noteMap[r.id] || ""}
+                onChange={(e) =>
+                  setNoteMap({ ...noteMap, [r.id]: e.target.value })
+                }
+                style={{
+                  width: "100%",
+                  marginTop: "8px",
+                  padding: "6px",
+                  background: "#000",
+                  color: "#fff",
+                  border: "1px solid #555",
+                  borderRadius: "6px",
+                }}
+              />
+
+              <div style={{ marginTop: "10px" }}>
+                <button
+                  onClick={() => approveRequest(r)}
+                  style={{
+                    marginRight: "10px",
+                    padding: "6px 14px",
+                    background: "#16a34a",
+                    color: "#fff",
+                    border: "none",
+                    borderRadius: "6px",
+                    cursor: "pointer",
+                  }}
+                >
+                  Approve
+                </button>
+
+                <button
+                  onClick={() => rejectRequest(r)}
+                  style={{
+                    padding: "6px 14px",
+                    background: "#dc2626",
+                    color: "#fff",
+                    border: "none",
+                    borderRadius: "6px",
+                    cursor: "pointer",
+                  }}
+                >
+                  Reject
+                </button>
+              </div>
+            </>
+          )}
+
+          {r.status === "rejected" && r.admin_note && (
+            <p style={{ color: "#f87171" }}>
+              <b>Admin Note:</b> {r.admin_note}
+            </p>
+          )}
         </div>
       ))}
-    </>
+    </div>
   );
 }
