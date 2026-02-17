@@ -1,4 +1,5 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import "./styles/app.css";
 
 /* AUTH */
 import Login from "./pages/auth/Login";
@@ -14,23 +15,19 @@ import Drivers from "./pages/customer/Drivers";
 import Vehicles from "./pages/customer/Vehicles";
 import Profile from "./pages/customer/Profile";
 import CustomerDashboard from "./pages/dashboards/Customer";
-import DriverRequests from "./pages/customer/DriverRequests";
-import CustomerHistory from "./pages/customer/History";
-import CustomerNotifications from "./pages/customer/CustomerNotifications";
 
 /* OWNER */
 import OwnerLayout from "./layouts/OwnerLayout";
 import OwnerDashboard from "./pages/dashboards/Owner";
-import YourVehicles from "./pages/owner/YourVehicles";
-import AddVehicle from "./pages/owner/AddVehicle";
+
+/* DRIVER */
+import DriverLayout from "./layouts/DriverLayout";
+import DriverDashboard from "./pages/dashboards/Driver";
+import DriverProfile from "./pages/driver/profile";
 
 /* ADMIN */
 import AdminLayout from "./pages/dashboards/Admin";
 import AdminRequests from "./pages/dashboards/AdminRequests";
-import AdminUsers from "./pages/dashboards/AdminUsers";
-import AdminDrivers from "./pages/dashboards/AdminDrivers";
-import AdminVehicles from "./pages/dashboards/AdminVehicles";
-import AdminReports from "./pages/dashboards/AdminReports";
 
 /* GUARD */
 import ProtectedRoute from "./routes/ProtectedRoute";
@@ -40,49 +37,45 @@ export default function App() {
     <Router>
       <Routes>
 
-        {/* ENTRY */}
-        <Route path="/" element={<RoleRedirect />} />
-
-        {/* PUBLIC */}
+        {/* ✅ PUBLIC FIRST */}
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
 
-        {/* CUSTOMER / DRIVER */}
+        {/* ✅ ENTRY (after login only) */}
+        <Route path="/" element={<ProtectedRoute />}>
+          <Route index element={<RoleRedirect />} />
+        </Route>
+
+        {/* ================= CUSTOMER ================= */}
         <Route element={<ProtectedRoute />}>
           <Route path="/customer" element={<CustomerLayout />}>
-            <Route index element={<CustomerHome />} />
+            <Route path="dashboard" element={<CustomerDashboard />} />
             <Route path="home" element={<CustomerHome />} />
             <Route path="drivers" element={<Drivers />} />
             <Route path="vehicles" element={<Vehicles />} />
             <Route path="profile" element={<Profile />} />
-            <Route path="dashboard" element={<CustomerDashboard />} />
-            <Route path="history" element={<CustomerHistory />} />
-            <Route path="driver-requests" element={<DriverRequests />} />
-            <Route
-              path="customer-notifications"
-              element={<CustomerNotifications />}
-            />
           </Route>
         </Route>
 
-        {/* OWNER */}
+        {/* ================= DRIVER ================= */}
+        <Route element={<ProtectedRoute roleRequired="driver" />}>
+          <Route path="/driver" element={<DriverLayout />}>
+            <Route path="dashboard" element={<DriverDashboard />} />
+            <Route path="profile" element={<DriverProfile />} />
+          </Route>
+        </Route>
+
+        {/* ================= OWNER ================= */}
         <Route element={<ProtectedRoute roleRequired="owner" />}>
           <Route path="/owner" element={<OwnerLayout />}>
             <Route path="dashboard" element={<OwnerDashboard />} />
-            <Route path="vehicles" element={<YourVehicles />} />
-            <Route path="add-vehicle" element={<AddVehicle />} />
           </Route>
         </Route>
 
-        {/* ADMIN */}
+        {/* ================= ADMIN ================= */}
         <Route element={<ProtectedRoute roleRequired="admin" />}>
           <Route path="/admin" element={<AdminLayout />}>
-            <Route index element={<AdminRequests />} />
             <Route path="requests" element={<AdminRequests />} />
-            <Route path="users" element={<AdminUsers />} />
-            <Route path="drivers" element={<AdminDrivers />} />
-            <Route path="vehicles" element={<AdminVehicles />} />
-            <Route path="reports" element={<AdminReports />} />
           </Route>
         </Route>
 

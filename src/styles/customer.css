@@ -61,3 +61,156 @@
   border-radius: 10px;
   max-width: 400px;
 }
+
+.drivers-page {
+  padding: 20px;
+  color: white;
+}
+
+.search-bar {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.search-bar button {
+  background: #facc15;
+  border: none;
+  padding: 8px 16px;
+  cursor: pointer;
+  border-radius: 6px;
+}
+
+.drivers-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 16px;
+}
+
+.driver-card {
+  background: #111;
+  padding: 15px;
+  border-radius: 10px;
+  border: 1px solid #333;
+}
+
+.driver-card button {
+  margin-top: 10px;
+  width: 100%;
+  background: #facc15;
+  border: none;
+  padding: 8px;
+  cursor: pointer;
+  border-radius: 6px;
+}
+
+.error-text {
+  color: #f87171;
+}
+.page-container {
+  padding: 20px;
+}
+
+.page-title {
+  color: #facc15;
+  margin-bottom: 20px;
+}
+
+.filter-box {
+  margin-bottom: 20px;
+}
+
+.driver-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 15px;
+}
+
+.driver-card {
+  background: #111;
+  padding: 15px;
+  border-radius: 8px;
+  border: 1px solid #333;
+}
+
+.primary-btn {
+  margin-top: 10px;
+  padding: 8px 12px;
+  background: #facc15;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.error-text {
+  color: #f87171;
+}
+.driver-card {
+  max-width: 500px;
+  margin: auto;
+  background: #111;
+  padding: 20px;
+  border-radius: 10px;
+  color: white;
+}
+
+.driver-card h2,
+.driver-card h4 {
+  color: #facc15;
+}
+
+.driver-card label {
+  display: block;
+  margin-top: 10px;
+  margin-bottom: 4px;
+}
+
+.driver-card input {
+  width: 100%;
+  padding: 8px;
+  background: #000;
+  border: 1px solid #444;
+  color: white;
+  border-radius: 6px;
+}
+
+.primary-btn {
+  margin-top: 15px;
+  padding: 10px;
+  background: #facc15;
+  border: none;
+  border-radius: 6px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.hire-card {
+  margin-top: 10px;
+  padding: 10px;
+  background: #000;
+  border: 1px solid #333;
+  border-radius: 6px;
+}
+
+.info-text {
+  margin-top: 10px;
+  color: #4ade80;
+}
+.hire-card {
+  margin-top: 15px;
+  padding: 15px;
+  background: #111;
+  border: 1px solid #333;
+  border-radius: 8px;
+  color: white;
+}
+
+.primary-btn {
+  background: #facc15;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: bold;
+}

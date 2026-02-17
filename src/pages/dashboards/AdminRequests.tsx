@@ -8,7 +8,7 @@ type RoleRequest = {
   status: "pending" | "approved" | "rejected";
   admin_note: string | null;
   license_url: string | null;
-  profiles?: {
+  profiles: {
     username: string;
     email: string;
   } | null;
@@ -18,77 +18,72 @@ export default function AdminRequests() {
   const [requests, setRequests] = useState<RoleRequest[]>([]);
   const [noteMap, setNoteMap] = useState<Record<string, string>>({});
 
-  const loadRequests = async () => {
-    // 1️⃣ Load role requests
-    const { data: roleRequests, error } = await supabase
-      .from("role_requests")
-      .select("*")
-      .order("created_at", { ascending: false });
+ const loadRequests = async () => {
+  const { data, error } = await supabase
+    .from("role_requests")
+    .select(`
+      id,
+      user_id,
+      requested_role,
+      status,
+      admin_note,
+      license_url,
+      profiles (
+        username,
+        email
+      )
+    `)
+    .returns<RoleRequest[]>()
+    .order("created_at", { ascending: false });
 
-    if (error || !roleRequests || roleRequests.length === 0) {
-      setRequests([]);
-      return;
-    }
+  if (error) {
+    console.error("Error loading role requests:", error);
+    setRequests([]);
+    return;
+  }
 
-    // 2️⃣ Load related profiles
-    const userIds = roleRequests.map((r) => r.user_id);
-
-    const { data: profiles } = await supabase
-      .from("profiles")
-      .select("user_id, username, email")
-      .in("user_id", userIds);
-
-    const profileMap: Record<string, any> = {};
-    profiles?.forEach((p) => {
-      profileMap[p.user_id] = p;
-    });
-
-    // 3️⃣ Merge
-    const merged = roleRequests.map((r) => ({
-      ...r,
-      profiles: profileMap[r.user_id] || null,
-    }));
-
-    setRequests(merged);
-  };
+  setRequests(data ?? []);
+};
 
   useEffect(() => {
     loadRequests();
   }, []);
 
-  // ✅ APPROVE REQUEST
   const approveRequest = async (req: RoleRequest) => {
-    // Update request
-    await supabase
-      .from("role_requests")
-      .update({ status: "approved", admin_note: null })
-      .eq("id", req.id);
+  // 1️⃣ mark request approved
+  await supabase
+    .from("role_requests")
+    .update({ status: "approved", admin_note: null })
+    .eq("id", req.id);
 
-    // Update profile + activate role
-    if (req.requested_role === "driver") {
-      await supabase
-        .from("profiles")
-        .update({
-          is_driver: true,
-          active_role: "driver",
-        })
-        .eq("user_id", req.user_id);
-    }
+  // 2️⃣ update profile
+  await supabase
+    .from("profiles")
+    .update({ is_driver: true })
+    .eq("user_id", req.user_id);
 
-    if (req.requested_role === "owner") {
-      await supabase
-        .from("profiles")
-        .update({
-          is_owner: true,
-          active_role: "owner",
-        })
-        .eq("user_id", req.user_id);
-    }
+  // 3️⃣ ensure drivers row exists
+  const { data: existingDriver } = await supabase
+    .from("drivers")
+    .select("id")
+    .eq("owner_id", req.user_id)
+    .maybeSingle();
 
-    loadRequests();
-  };
+  if (!existingDriver) {
+    await supabase.from("drivers").insert({
+      owner_id: req.user_id,
+      name: "Not set",
+      license_number: "PENDING",
+      experience_years: 0,
+      price_per_day: 0,
+      available: false,
+      verified: true
+    });
+  }
 
-  // ❌ REJECT REQUEST
+  loadRequests();
+};
+
   const rejectRequest = async (req: RoleRequest) => {
     const note = noteMap[req.id] || "Request rejected";
 
@@ -120,8 +115,8 @@ export default function AdminRequests() {
             background: "#111",
           }}
         >
-          <p><b>User:</b> {r.profiles?.username || "—"}</p>
-          <p><b>Email:</b> {r.profiles?.email || "—"}</p>
+          <p><b>User:</b> {r.profiles?.username}</p>
+          <p><b>Email:</b> {r.profiles?.email}</p>
           <p><b>Requested Role:</b> {r.requested_role}</p>
           <p><b>Status:</b> {r.status}</p>
 

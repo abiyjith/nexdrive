@@ -17,42 +17,56 @@ export default function CustomerDashboard() {
   const [driverRequest, setDriverRequest] = useState<RoleRequest | null>(null);
   const [ownerRequest, setOwnerRequest] = useState<RoleRequest | null>(null);
 
+  /* ================= LOAD DATA ================= */
   const loadAll = async () => {
-    setLoading(true);
+    const { data: auth } = await supabase.auth.getUser();
+    if (!auth.user) return;
 
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-
-    if (!session?.user) {
-      setLoading(false);
-      return;
-    }
-
-    // 🔁 ALWAYS fetch fresh profile
+    // Profile
     const { data: profileData } = await supabase
       .from("profiles")
       .select("*")
-      .eq("user_id", session.user.id)
+      .eq("user_id", auth.user.id)
       .single();
 
-    setProfile(profileData);
+    if (!profileData) return;
 
-    // Load role requests
+    // Role requests
     const { data: requests } = await supabase
       .from("role_requests")
       .select("requested_role, status, admin_note")
-      .eq("user_id", session.user.id);
+      .eq("user_id", auth.user.id);
+
+    let updatedProfile = { ...profileData };
 
     if (requests) {
-      setDriverRequest(
-        requests.find((r) => r.requested_role === "driver") || null
-      );
-      setOwnerRequest(
-        requests.find((r) => r.requested_role === "owner") || null
-      );
+      const driverReq = requests.find(r => r.requested_role === "driver") || null;
+      const ownerReq = requests.find(r => r.requested_role === "owner") || null;
+
+      setDriverRequest(driverReq);
+      setOwnerRequest(ownerReq);
+
+      // ✅ AUTO-SYNC ON APPROVAL
+      if (driverReq?.status === "approved" && !profileData.is_driver) {
+        await supabase
+          .from("profiles")
+          .update({ is_driver: true })
+          .eq("user_id", auth.user.id);
+
+        updatedProfile.is_driver = true;
+      }
+
+      if (ownerReq?.status === "approved" && !profileData.is_owner) {
+        await supabase
+          .from("profiles")
+          .update({ is_owner: true })
+          .eq("user_id", auth.user.id);
+
+        updatedProfile.is_owner = true;
+      }
     }
 
+    setProfile(updatedProfile);
     setLoading(false);
   };
 
@@ -60,27 +74,22 @@ export default function CustomerDashboard() {
     loadAll();
   }, []);
 
-  // 🔁 Switch role
+  /* ================= ROLE SWITCH ================= */
   const handleRoleChange = async (role: string) => {
-    if (!profile) return;
-
     await supabase
       .from("profiles")
       .update({ active_role: role })
       .eq("id", profile.id);
 
-    // reload profile to reflect change
-    await loadAll();
+    setProfile({ ...profile, active_role: role });
   };
 
-  // 📤 Request role
+  /* ================= REQUEST ROLE ================= */
   const requestRole = async (role: "driver" | "owner") => {
     if (!licenseFile) {
       setMessage("Please upload license / ID proof first");
       return;
     }
-
-    setMessage("");
 
     const filePath = `${profile.user_id}/${role}-${Date.now()}-${licenseFile.name}`;
 
@@ -93,7 +102,7 @@ export default function CustomerDashboard() {
       return;
     }
 
-    const { data: urlData } = supabase.storage
+    const { data } = supabase.storage
       .from("licenses")
       .getPublicUrl(filePath);
 
@@ -101,7 +110,7 @@ export default function CustomerDashboard() {
       user_id: profile.user_id,
       requested_role: role,
       status: "pending",
-      license_url: urlData.publicUrl,
+      license_url: data.publicUrl,
     });
 
     if (error) {
@@ -110,41 +119,24 @@ export default function CustomerDashboard() {
     }
 
     setMessage("Role request sent successfully");
-    setLicenseFile(null);
-    await loadAll();
+    loadAll();
   };
 
   if (loading || !profile) return null;
 
   return (
-    <div style={{ padding: "20px", maxWidth: "420px" }}>
-      <h2 style={{ color: "#facc15" }}>Dashboard</h2>
+    <div style={{ padding: 20, maxWidth: 420 }}>
+      <h2 style={{ color: "#facc15" }}>Customer Dashboard</h2>
 
-      <p>
-        <strong>Name:</strong> {profile.first_name} {profile.last_name}
-      </p>
-
-      <p>
-        <strong>Active Role:</strong> {profile.active_role}
-      </p>
+      <p><b>Name:</b> {profile.first_name} {profile.last_name}</p>
+      <p><b>Active Role:</b> {profile.active_role}</p>
 
       {/* ROLE SWITCH */}
-      <div style={{ marginTop: "12px" }}>
-        <label style={{ display: "block", marginBottom: "6px" }}>
-          Switch Role
-        </label>
-
+      <div style={{ marginTop: 12 }}>
+        <label>Switch Role</label>
         <select
           value={profile.active_role}
           onChange={(e) => handleRoleChange(e.target.value)}
-          style={{
-            width: "180px",
-            padding: "6px",
-            background: "#111",
-            color: "#fff",
-            border: "1px solid #facc15",
-            borderRadius: "6px",
-          }}
         >
           <option value="customer">Customer</option>
           {profile.is_driver && <option value="driver">Driver</option>}
@@ -152,85 +144,36 @@ export default function CustomerDashboard() {
         </select>
       </div>
 
-      {/* REQUEST ROLE */}
-      <div style={{ marginTop: "20px" }}>
-        <h4 style={{ marginBottom: "10px" }}>Request Additional Role</h4>
+      {/* ROLE REQUEST */}
+      <div style={{ marginTop: 20 }}>
+        <h4>Request Additional Role</h4>
 
         <input
           type="file"
           accept="image/*,.pdf"
           onChange={(e) => setLicenseFile(e.target.files?.[0] || null)}
-          style={{ marginBottom: "10px", display: "block" }}
         />
 
-        {/* DRIVER */}
-        {!profile.is_driver && (
-          <>
-            {driverRequest?.status === "pending" && (
-              <p style={{ color: "#facc15" }}>
-                Driver request pending approval
-              </p>
-            )}
-
-            {driverRequest?.status === "rejected" && (
-              <p style={{ color: "#f87171" }}>
-                Driver request rejected: {driverRequest.admin_note}
-              </p>
-            )}
-
-            {!driverRequest && (
-              <button
-                onClick={() => requestRole("driver")}
-                style={{
-                  marginRight: "10px",
-                  padding: "8px 14px",
-                  background: "#facc15",
-                  border: "none",
-                  borderRadius: "6px",
-                  cursor: "pointer",
-                }}
-              >
-                Request Driver Role
-              </button>
-            )}
-          </>
+        {!profile.is_driver && !driverRequest && (
+          <button onClick={() => requestRole("driver")}>
+            Request Driver Role
+          </button>
         )}
 
-        {/* OWNER */}
-        {!profile.is_owner && (
-          <>
-            {ownerRequest?.status === "pending" && (
-              <p style={{ color: "#facc15" }}>
-                Owner request pending approval
-              </p>
-            )}
-
-            {ownerRequest?.status === "rejected" && (
-              <p style={{ color: "#f87171" }}>
-                Owner request rejected: {ownerRequest.admin_note}
-              </p>
-            )}
-
-            {!ownerRequest && (
-              <button
-                onClick={() => requestRole("owner")}
-                style={{
-                  padding: "8px 14px",
-                  background: "#facc15",
-                  border: "none",
-                  borderRadius: "6px",
-                  cursor: "pointer",
-                }}
-              >
-                Request Owner Role
-              </button>
-            )}
-          </>
+        {!profile.is_owner && !ownerRequest && (
+          <button onClick={() => requestRole("owner")}>
+            Request Owner Role
+          </button>
         )}
 
-        {message && (
-          <p style={{ marginTop: "10px", color: "#facc15" }}>{message}</p>
+        {driverRequest?.status === "pending" && (
+          <p>Driver request pending approval</p>
         )}
+        {ownerRequest?.status === "pending" && (
+          <p>Owner request pending approval</p>
+        )}
+
+        {message && <p>{message}</p>}
       </div>
     </div>
   );

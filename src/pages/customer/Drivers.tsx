@@ -1,160 +1,204 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { supabase } from "../../lib/supabase";
-import RequestDriverModal from "../../components/RequestDriverModal";
+import DatePicker from "react-multi-date-picker";
 
 type Driver = {
-  user_id: string;
-  first_name: string;
-  last_name: string;
-  rating: number | null;
-  available_dates?: string[];
-  image_url?: string | null;
+  id: string;
+  owner_id: string;
+  name: string;
+  experience_years: number;
+  price_per_day: number;
 };
 
 export default function Drivers() {
   const [drivers, setDrivers] = useState<Driver[]>([]);
-  const [selectedDate, setSelectedDate] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [message, setMessage] = useState<string | null>(null);
+  const [selectedDates, setSelectedDates] = useState<any[]>([]);
+  const [pickupLocation, setPickupLocation] = useState("");
+  const [message, setMessage] = useState("");
 
-  const [activeDriver, setActiveDriver] = useState<Driver | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<"cash" | "gpay" | null>(null);
 
-  useEffect(() => {
-    loadDrivers();
-  }, []);
+  /* ================= STEP 0 – CLEAN PAST AVAILABILITY ================= */
+  const cleanPastAvailability = async () => {
+    const today = new Date().toISOString().split("T")[0];
 
-  async function loadDrivers(date?: string) {
-    setLoading(true);
-    setMessage(null);
-
-    const { data: driverProfiles } = await supabase
-      .from("profiles")
-      .select(`
-        user_id,
-        first_name,
-        last_name,
-        image_url,
-        ratings:ratings ( rating )
-      `)
-      .eq("is_driver", true)
-      .eq("is_banned", false);
-
-    const { data: availability } = await supabase
+    await supabase
       .from("driver_availability")
-      .select("driver_id, available_date");
+      .delete()
+      .lt("available_date", today);
+  };
 
-    const availabilityMap: Record<string, string[]> = {};
-    (availability || []).forEach((a) => {
-      if (!availabilityMap[a.driver_id]) {
-        availabilityMap[a.driver_id] = [];
-      }
-      availabilityMap[a.driver_id].push(a.available_date);
-    });
+  /* ================= STEP 1 – SEARCH DRIVERS ================= */
+  const searchDrivers = async () => {
+    setMessage("");
+    setDrivers([]);
 
-    let processedDrivers: Driver[] = (driverProfiles || []).map(
-      (d: any) => {
-        const ratings = d.ratings?.map((r: any) => r.rating) || [];
-        const avgRating =
-          ratings.length > 0
-            ? ratings.reduce((a: number, b: number) => a + b, 0) /
-              ratings.length
-            : null;
+    await cleanPastAvailability();
 
-        return {
-          user_id: d.user_id,
-          first_name: d.first_name,
-          last_name: d.last_name,
-          image_url: d.image_url,
-          rating: avgRating,
-          available_dates: availabilityMap[d.user_id] || [],
-        };
-      }
-    );
-
-    if (date) {
-      processedDrivers = processedDrivers.filter(
-        (d) =>
-          d.available_dates &&
-          d.available_dates.length > 0 &&
-          d.available_dates.includes(date)
-      );
-
-      if (processedDrivers.length === 0) {
-        setMessage("No drivers available for the selected date.");
-      }
+    if (selectedDates.length === 0) {
+      setMessage("Please select at least one date");
+      return;
     }
 
-    setDrivers(processedDrivers);
-    setLoading(false);
-  }
+    const dateStrings = selectedDates.map((d) =>
+      d.format("YYYY-MM-DD")
+    );
 
-  function handleSearch() {
-    if (!selectedDate) loadDrivers();
-    else loadDrivers(selectedDate);
-  }
+    // Find drivers available on ANY selected date
+    const { data: availability } = await supabase
+      .from("driver_availability")
+      .select("driver_id")
+      .in("available_date", dateStrings);
 
-  if (loading) return <p>Loading drivers...</p>;
+    if (!availability || availability.length === 0) {
+      setMessage("No drivers available for selected date(s)");
+      return;
+    }
+
+    const driverIds = [
+      ...new Set(availability.map((a) => a.driver_id)),
+    ];
+
+    const { data: driverData, error } = await supabase
+      .from("drivers")
+      .select("*")
+      .in("owner_id", driverIds)
+      .eq("verified", true);
+
+    if (error || !driverData) {
+      setMessage("Failed to load drivers");
+      return;
+    }
+
+    setDrivers(driverData);
+  };
+
+  /* ================= STEP 2 + 3 – HIRE + PAYMENT ================= */
+  const hireDriver = async (driver: Driver) => {
+    if (!pickupLocation) {
+      setMessage("Please enter pickup location");
+      return;
+    }
+
+    if (!paymentMethod) {
+      setMessage("Select payment method");
+      return;
+    }
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) return;
+
+    const dates = selectedDates.map((d) =>
+      d.format("YYYY-MM-DD")
+    );
+
+    const totalPrice = dates.length * driver.price_per_day;
+
+    // Create hire record
+    const { error } = await supabase
+      .from("driver_hires")
+      .insert({
+        customer_id: user.id,
+        driver_id: driver.owner_id,
+        start_date: dates[0],
+        end_date: dates[dates.length - 1],
+        status: "pending",
+        pickup_location: pickupLocation,
+        payment_method: paymentMethod,
+        payment_status: "awaiting_confirmation",
+        total_price: totalPrice,
+      });
+
+    if (error) {
+      setMessage("Failed to hire driver");
+      return;
+    }
+
+    // Remove ONLY booked dates
+    await supabase
+      .from("driver_availability")
+      .delete()
+      .eq("driver_id", driver.owner_id)
+      .in("available_date", dates);
+
+    setMessage("Driver hired. Waiting for driver confirmation.");
+    setDrivers([]);
+    setSelectedDates([]);
+    setPickupLocation("");
+    setPaymentMethod(null);
+  };
 
   return (
-    <div className="page">
-      <h2>🧑‍✈️ Available Drivers</h2>
+    <div style={{ padding: 20, maxWidth: 900 }}>
+      <h2 style={{ color: "#facc15" }}>Find Drivers</h2>
 
-      <div className="card">
-        <label>Select date to check availability</label>
+      {/* DATE PICKER */}
+      <DatePicker
+        multiple
+        minDate={new Date()}
+        value={selectedDates}
+        onChange={setSelectedDates}
+        format="YYYY-MM-DD"
+      />
+
+      <br />
+      <button className="primary-btn" onClick={searchDrivers}>
+        Search Drivers
+      </button>
+
+      {/* PICKUP LOCATION */}
+      <h4 style={{ marginTop: 20 }}>Pickup Location</h4>
+      <input
+        placeholder="Enter pickup address"
+        value={pickupLocation}
+        onChange={(e) => setPickupLocation(e.target.value)}
+        style={{ width: "100%", padding: 8 }}
+      />
+
+      {/* PAYMENT */}
+      <h4 style={{ marginTop: 20 }}>Payment Method</h4>
+      <label>
         <input
-          type="date"
-          value={selectedDate}
-          onChange={(e) => setSelectedDate(e.target.value)}
-        />
-        <button onClick={handleSearch}>Search</button>
-      </div>
+          type="radio"
+          name="payment"
+          checked={paymentMethod === "cash"}
+          onChange={() => setPaymentMethod("cash")}
+        />{" "}
+        Cash
+      </label>
+      <br />
+      <label>
+        <input
+          type="radio"
+          name="payment"
+          checked={paymentMethod === "gpay"}
+          onChange={() => setPaymentMethod("gpay")}
+        />{" "}
+        GPay / UPI
+      </label>
 
-      {message && <div className="alert info">{message}</div>}
-
-      <div className="grid">
-        {drivers.map((d) => (
-          <div key={d.user_id} className="card">
-            {d.image_url && (
-              <img
-                src={
-                  supabase.storage
-                    .from("profile-images")
-                    .getPublicUrl(d.image_url).data.publicUrl
-                }
-                alt="Driver"
-                style={{
-                  width: "100%",
-                  height: "180px",
-                  objectFit: "cover",
-                  borderRadius: "8px",
-                  marginBottom: "10px",
-                }}
-              />
-            )}
-
-            <h3>
-              {d.first_name} {d.last_name}
-            </h3>
-
-            <p>
-              <b>Rating:</b>{" "}
-              {d.rating ? d.rating.toFixed(1) + " ⭐" : "Not rated yet"}
-            </p>
-
-            <button onClick={() => setActiveDriver(d)}>
-              Request Driver
-            </button>
-          </div>
-        ))}
-      </div>
-
-      {activeDriver && (
-        <RequestDriverModal
-          driverId={activeDriver.user_id}
-          driverName={`${activeDriver.first_name} ${activeDriver.last_name}`}
-          onClose={() => setActiveDriver(null)}
-        />
+      {message && (
+        <p style={{ color: "#facc15", marginTop: 10 }}>{message}</p>
       )}
+
+      {/* DRIVER LIST */}
+      {drivers.map((d) => (
+        <div key={d.id} className="hire-card">
+          <p><b>Name:</b> {d.name}</p>
+          <p><b>Experience:</b> {d.experience_years} years</p>
+          <p><b>Price / day:</b> ₹{d.price_per_day}</p>
+          <p>
+            <b>Total:</b> ₹{selectedDates.length * d.price_per_day}
+          </p>
+
+          <button className="primary-btn" onClick={() => hireDriver(d)}>
+            Hire Driver
+          </button>
+        </div>
+      ))}
     </div>
   );
 }

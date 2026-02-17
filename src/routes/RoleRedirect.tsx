@@ -1,58 +1,46 @@
-import { useEffect, useState } from "react";
-import { Navigate } from "react-router-dom";
+import { useEffect } from "react";
 import { supabase } from "../lib/supabase";
+import { useNavigate } from "react-router-dom";
 
 export default function RoleRedirect() {
-  const [loading, setLoading] = useState(true);
-  const [redirectTo, setRedirectTo] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
-    const resolve = async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
-      // Not logged in
-      if (!session?.user) {
-        setRedirectTo("/login");
-        setLoading(false);
+    const redirect = async () => {
+      const { data: auth } = await supabase.auth.getUser();
+      if (!auth.user) {
+        navigate("/login");
         return;
       }
 
-      // Load profile
       const { data: profile } = await supabase
         .from("profiles")
         .select("active_role")
-        .eq("user_id", session.user.id)
+        .eq("user_id", auth.user.id)
         .single();
 
       if (!profile) {
-        setRedirectTo("/login");
-        setLoading(false);
+        navigate("/login");
         return;
       }
 
-      // Role-based redirect
       switch (profile.active_role) {
         case "admin":
-          setRedirectTo("/admin");
+          navigate("/admin");
           break;
         case "owner":
-          setRedirectTo("/owner/dashboard");
+          navigate("/owner/dashboard");
           break;
         case "driver":
-        case "customer":
+          navigate("/driver/dashboard");
+          break;
         default:
-          setRedirectTo("/customer/dashboard");
+          navigate("/customer/dashboard");
       }
-
-      setLoading(false);
     };
 
-    resolve();
-  }, []);
+    redirect();
+  }, [navigate]);
 
-  if (loading) return null;
-
-  return redirectTo ? <Navigate to={redirectTo} replace /> : null;
+  return null;
 }

@@ -1,0 +1,155 @@
+.driver-root {
+  min-height: 100vh;
+  background: black;
+  color: white;
+}
+
+.driver-navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 25px;
+  background: #111;
+}
+
+.nav-links a {
+  margin-right: 15px;
+  color: white;
+  text-decoration: none;
+}
+
+.nav-links a.active {
+  color: yellow;
+}
+
+.logout-btn {
+  background: yellow;
+  border: none;
+  padding: 8px 14px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.driver-content {
+  padding: 30px;
+}
+
+.driver-card {
+  background: #111;
+  padding: 25px;
+  border-radius: 10px;
+  max-width: 450px;
+  box-shadow: 0 0 15px rgba(255, 255, 0, 0.2);
+}
+
+.primary-btn {
+  margin-top: 12px;
+  background: yellow;
+  color: black;
+  padding: 8px 14px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.info-text {
+  margin-top: 10px;
+  color: yellow;
+}
+
+select {
+  width: 100%;
+  margin: 8px 0 15px;
+  padding: 6px;
+  background: #111;
+  color: #fff;
+  border: 1px solid yellow;
+  border-radius: 6px;
+}
+
+.hire-card {
+  margin-top: 10px;
+  padding: 10px;
+  background: #000;
+  border: 1px solid #333;
+  border-radius: 6px;
+}
+
+.driver-navbar {
+  background: #111;
+  padding: 12px;
+  display: flex;
+  gap: 20px;
+  align-items: center;
+  color: #facc15;
+}
+
+.driver-navbar a {
+  color: #facc15;
+  text-decoration: none;
+}
+
+.driver-card {
+  background: #111;
+  padding: 20px;
+  border-radius: 10px;
+  max-width: 500px;
+  color: #fff;
+}
+
+.hire-card {
+  border: 1px solid #444;
+  padding: 10px;
+  margin-bottom: 10px;
+}
+.driver-card {
+  max-width: 500px;
+  margin: auto;
+  background: #111;
+  padding: 20px;
+  border-radius: 10px;
+  color: white;
+}
+
+.driver-card h2,
+.driver-card h4 {
+  color: #facc15;
+}
+
+.driver-card label {
+  display: block;
+  margin-top: 10px;
+  margin-bottom: 4px;
+}
+
+.driver-card input {
+  width: 100%;
+  padding: 8px;
+  background: #000;
+  border: 1px solid #444;
+  color: white;
+  border-radius: 6px;
+}
+
+.primary-btn {
+  margin-top: 15px;
+  padding: 10px;
+  background: #facc15;
+  border: none;
+  border-radius: 6px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.hire-card {
+  margin-top: 10px;
+  padding: 10px;
+  background: #000;
+  border: 1px solid #333;
+  border-radius: 6px;
+}
+
+.info-text {
+  margin-top: 10px;
+  color: #4ade80;
+}
