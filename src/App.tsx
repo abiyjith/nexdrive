@@ -19,6 +19,9 @@ import CustomerDashboard from "./pages/dashboards/Customer";
 /* OWNER */
 import OwnerLayout from "./layouts/OwnerLayout";
 import OwnerDashboard from "./pages/dashboards/Owner";
+import AddVehicle from "./pages/owner/AddVehicle";
+import YourVehicles from "./pages/owner/YourVehicles";
+import VehicleBookings from "./pages/owner/VehicleBookings";
 
 /* DRIVER */
 import DriverLayout from "./layouts/DriverLayout";
@@ -28,6 +31,10 @@ import DriverProfile from "./pages/driver/profile";
 /* ADMIN */
 import AdminLayout from "./pages/dashboards/Admin";
 import AdminRequests from "./pages/dashboards/AdminRequests";
+import AdminUsers from "./pages/dashboards/AdminUsers";
+import AdminDrivers from "./pages/dashboards/AdminDrivers";
+import AdminVehicles from "./pages/dashboards/AdminVehicles";
+import AdminReports from "./pages/dashboards/AdminReports";
 
 /* GUARD */
 import ProtectedRoute from "./routes/ProtectedRoute";
@@ -69,13 +76,22 @@ export default function App() {
         <Route element={<ProtectedRoute roleRequired="owner" />}>
           <Route path="/owner" element={<OwnerLayout />}>
             <Route path="dashboard" element={<OwnerDashboard />} />
+            <Route path="addvehicle" element={<AddVehicle />} />
+             <Route path="bookings" element={<VehicleBookings />} />
+            <Route path="yourvehicles" element={<YourVehicles />} />
           </Route>
         </Route>
 
         {/* ================= ADMIN ================= */}
         <Route element={<ProtectedRoute roleRequired="admin" />}>
           <Route path="/admin" element={<AdminLayout />}>
-            <Route path="requests" element={<AdminRequests />} />
+          <Route index element={<AdminRequests />} />
+          <Route path="requests" element={<AdminRequests />} />
+          <Route path="users" element={<AdminUsers />} />
+          <Route path="drivers" element={<AdminDrivers />} />
+          <Route path="vehicles" element={<AdminVehicles />} />
+          <Route path="reports" element={<AdminReports />} />
+          <Route path="requests" element={<AdminRequests />} />
           </Route>
         </Route>
 

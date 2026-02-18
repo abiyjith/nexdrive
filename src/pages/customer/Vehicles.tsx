@@ -1,97 +1,150 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabase";
-import VehicleBookingModal from "../../components/VehicleBookingModal";
+import DatePicker from "react-multi-date-picker";
 
-type Vehicle = {
-  id: string;
-  brand: string;
-  model: string;
-  vehicle_type: string;
-  year: number;
-  price_per_day: number;
-  location_text: string;
-  image_url?: string | null;
-};
+export default function Vehicles() {
+  const [vehicles, setVehicles] = useState<any[]>([]);
+  const [selectedVehicle, setSelectedVehicle] = useState<any>(null);
+  const [dates, setDates] = useState<any[]>([]);
+  const [message, setMessage] = useState("");
+  const [loading, setLoading] = useState(false);
 
-export default function CustomerVehicles() {
-  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [activeVehicle, setActiveVehicle] = useState<Vehicle | null>(null);
-
+  /* ================= LOAD VEHICLES ================= */
   useEffect(() => {
     loadVehicles();
   }, []);
 
-  async function loadVehicles() {
-    const { data } = await supabase
+  const loadVehicles = async () => {
+    const { data, error } = await supabase
       .from("vehicles")
       .select("*")
       .eq("verification_status", "approved")
-      .eq("is_available", true);
+      .eq("is_active", true);
 
-    setVehicles(data || []);
+    if (!error) {
+      setVehicles(data || []);
+    }
+  };
+
+  /* ================= BOOK VEHICLE ================= */
+  const bookVehicle = async () => {
+    if (!selectedVehicle || dates.length === 0) {
+      setMessage("Select vehicle and booking dates");
+      return;
+    }
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) return;
+
+    setLoading(true);
+    setMessage("");
+
+    const dateStrings = dates.map((d) => d.format("YYYY-MM-DD"));
+    const totalPrice =
+      dateStrings.length * Number(selectedVehicle.price_per_day);
+
+    const { error } = await supabase.from("vehicle_bookings").insert({
+      vehicle_id: selectedVehicle.id,
+      customer_id: user.id,
+      start_date: dateStrings[0],
+      end_date: dateStrings[dateStrings.length - 1],
+      status: "pending",
+      total_price: totalPrice,
+    });
+
+    if (error) {
+      setMessage(error.message);
+      setLoading(false);
+      return;
+    }
+
+    setMessage("✅ Vehicle booked successfully. Pay owner directly.");
+    setDates([]);
+    setSelectedVehicle(null);
     setLoading(false);
-  }
-
-  if (loading) return <p>Loading vehicles...</p>;
+  };
 
   return (
-    <div className="page">
-      <h2>🚗 Available Vehicles</h2>
+    <div className="page-container">
+      <h2 style={{ color: "#facc15" }}>Available Vehicles</h2>
 
-      {vehicles.length === 0 && (
-        <div className="alert info">No vehicles available.</div>
+      {vehicles.length === 0 && <p>No vehicles available</p>}
+
+      {vehicles.map((v) => (
+        <div key={v.id} className="vehicle-card">
+          <h3>
+            {v.brand} {v.model}
+          </h3>
+
+          <p>
+            <b>Type:</b> {v.vehicle_type}
+          </p>
+
+          <p>
+            <b>₹ {v.price_per_day}</b> / day
+          </p>
+
+          <p>
+            <b>Location:</b> {v.location_text}
+          </p>
+
+          <button
+            className="primary-btn"
+            onClick={() => {
+              setSelectedVehicle(v);
+              setDates([]);
+              setMessage("");
+            }}
+          >
+            Book Vehicle
+          </button>
+        </div>
+      ))}
+
+      {/* ================= BOOKING BOX ================= */}
+      {selectedVehicle && (
+        <div className="booking-box">
+          <h3>
+            Booking: {selectedVehicle.brand} {selectedVehicle.model}
+          </h3>
+
+          <DatePicker
+            multiple
+            minDate={new Date()}
+            value={dates}
+            onChange={setDates}
+            format="YYYY-MM-DD"
+          />
+
+          <p style={{ marginTop: 10 }}>
+            <b>Total:</b> ₹
+            {dates.length * Number(selectedVehicle.price_per_day)}
+          </p>
+
+          <button
+            className="primary-btn"
+            disabled={loading}
+            onClick={bookVehicle}
+          >
+            {loading ? "Booking..." : "Confirm Booking"}
+          </button>
+
+          <button
+            style={{ marginLeft: 10 }}
+            onClick={() => {
+              setSelectedVehicle(null);
+              setDates([]);
+            }}
+          >
+            Cancel
+          </button>
+        </div>
       )}
 
-      <div className="grid">
-        {vehicles.map((v) => (
-          <div key={v.id} className="card">
-            {v.image_url && (
-              <img
-                src={
-                  supabase.storage
-                    .from("vehicle-images")
-                    .getPublicUrl(v.image_url).data.publicUrl
-                }
-                alt="Vehicle"
-                style={{
-                  width: "100%",
-                  height: "180px",
-                  objectFit: "cover",
-                  borderRadius: "8px",
-                  marginBottom: "10px",
-                }}
-              />
-            )}
-
-            <h3>
-              {v.brand} {v.model}
-            </h3>
-
-            <p><b>Type:</b> {v.vehicle_type}</p>
-            <p><b>Year:</b> {v.year}</p>
-            <p><b>Location:</b> {v.location_text}</p>
-            <p><b>₹ {v.price_per_day}</b> / day</p>
-
-            <button onClick={() => setActiveVehicle(v)}>
-              Book Vehicle
-            </button>
-          </div>
-        ))}
-      </div>
-
-      {activeVehicle && (
-        <VehicleBookingModal
-          vehicleId={activeVehicle.id}
-          vehicleName={`${activeVehicle.brand} ${activeVehicle.model}`}
-          pricePerDay={activeVehicle.price_per_day}
-          onClose={() => setActiveVehicle(null)}
-          onBooked={() => {
-            setActiveVehicle(null);
-            loadVehicles();
-          }}
-        />
-      )}
+      {message && <p style={{ marginTop: 15 }}>{message}</p>}
     </div>
   );
 }

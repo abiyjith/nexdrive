@@ -3,64 +3,76 @@ import { supabase } from "../../lib/supabase";
 import DatePicker from "react-multi-date-picker";
 import { useNavigate } from "react-router-dom";
 
+type RoleRequest = {
+  requested_role: "driver" | "owner";
+  status: "pending" | "approved" | "rejected";
+};
+
 export default function DriverDashboard() {
   const navigate = useNavigate();
 
   const [profile, setProfile] = useState<any>(null);
-  const [activeRole, setActiveRole] = useState("driver");
-
   const [availability, setAvailability] = useState<string[]>([]);
   const [selectedDates, setSelectedDates] = useState<any[]>([]);
   const [hires, setHires] = useState<any[]>([]);
   const [message, setMessage] = useState("");
 
+  const [licenseFile, setLicenseFile] = useState<File | null>(null);
+  const [ownerRequest, setOwnerRequest] = useState<RoleRequest | null>(null);
+
   /* ================= LOAD DATA ================= */
   useEffect(() => {
-    const load = async () => {
-      const { data: auth } = await supabase.auth.getUser();
-      if (!auth.user) return;
-
-      // Profile
-      const { data: profileData } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("user_id", auth.user.id)
-        .single();
-
-      if (!profileData) return;
-
-      setProfile(profileData);
-      setActiveRole(profileData.active_role);
-
-      // Availability
-      const { data: avail } = await supabase
-        .from("driver_availability")
-        .select("available_date")
-        .eq("driver_id", auth.user.id);
-
-      setAvailability(avail?.map(a => a.available_date) || []);
-
-      // Hire requests
-      const { data: hireData } = await supabase
-        .from("driver_hires")
-        .select("*")
-        .eq("driver_id", auth.user.id)
-        .order("created_at", { ascending: false });
-
-      setHires(hireData || []);
-    };
-
-    load();
+    loadData();
   }, []);
 
+  const loadData = async () => {
+    const { data: auth } = await supabase.auth.getUser();
+    if (!auth.user) return;
+
+    // Profile
+    const { data: profileData } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("user_id", auth.user.id)
+      .single();
+
+    if (!profileData) return;
+    setProfile(profileData);
+
+    // Availability
+    const { data: avail } = await supabase
+      .from("driver_availability")
+      .select("available_date")
+      .eq("driver_id", auth.user.id);
+
+    setAvailability(avail?.map(a => a.available_date) || []);
+
+    // Hires
+    const { data: hireData } = await supabase
+      .from("driver_hires")
+      .select("*")
+      .eq("driver_id", auth.user.id)
+      .order("created_at", { ascending: false });
+
+    setHires(hireData || []);
+
+    // Owner role request
+    const { data: requests } = await supabase
+      .from("role_requests")
+      .select("requested_role, status")
+      .eq("user_id", auth.user.id)
+      .eq("requested_role", "owner")
+      .maybeSingle();
+
+    if (requests) setOwnerRequest(requests);
+  };
+
   /* ================= ROLE SWITCH ================= */
-  const changeRole = async (role: string) => {
+  const handleRoleChange = async (role: string) => {
     await supabase
       .from("profiles")
       .update({ active_role: role })
       .eq("user_id", profile.user_id);
-
-    setActiveRole(role);
 
     if (role === "customer") navigate("/customer/dashboard");
     if (role === "driver") navigate("/driver/dashboard");
@@ -93,6 +105,44 @@ export default function DriverDashboard() {
     setMessage("Availability updated");
   };
 
+  /* ================= REQUEST OWNER ROLE ================= */
+  const requestOwnerRole = async () => {
+    if (!licenseFile) {
+      setMessage("Upload license / ID proof first");
+      return;
+    }
+
+    const filePath = `${profile.user_id}/owner-${Date.now()}-${licenseFile.name}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from("licenses")
+      .upload(filePath, licenseFile);
+
+    if (uploadError) {
+      setMessage("File upload failed");
+      return;
+    }
+
+    const { data } = supabase.storage
+      .from("licenses")
+      .getPublicUrl(filePath);
+
+    const { error } = await supabase.from("role_requests").insert({
+      user_id: profile.user_id,
+      requested_role: "owner",
+      status: "pending",
+      license_url: data.publicUrl,
+    });
+
+    if (error) {
+      setMessage("Owner request already exists");
+      return;
+    }
+
+    setMessage("Owner role request sent for approval");
+    loadData();
+  };
+
   /* ================= UPDATE HIRE ================= */
   const updateHire = async (id: string, status: string) => {
     await supabase
@@ -100,7 +150,7 @@ export default function DriverDashboard() {
       .update({ status })
       .eq("id", id);
 
-    window.location.reload();
+    loadData();
   };
 
   /* ================= CONFIRM PAYMENT ================= */
@@ -110,7 +160,7 @@ export default function DriverDashboard() {
       .update({ payment_status: "paid" })
       .eq("id", id);
 
-    window.location.reload();
+    loadData();
   };
 
   if (!profile) return null;
@@ -122,21 +172,18 @@ export default function DriverDashboard() {
       <p><b>Name:</b> {profile.first_name} {profile.last_name}</p>
 
       {/* ROLE SWITCH */}
-      <div style={{ marginBottom: 20 }}>
-        <label><b>Switch Role</b></label>
-        <select
-          value={activeRole}
-          onChange={(e) => changeRole(e.target.value)}
-        >
-          <option value="customer">Customer</option>
-          {profile.is_driver && <option value="driver">Driver</option>}
-          {profile.is_owner && <option value="owner">Owner</option>}
-        </select>
-      </div>
+      <label><b>Switch Role</b></label>
+      <select
+        value={profile.active_role}
+        onChange={(e) => handleRoleChange(e.target.value)}
+      >
+        <option value="customer">Customer</option>
+        {profile.is_driver && <option value="driver">Driver</option>}
+        {profile.is_owner && <option value="owner">Owner</option>}
+      </select>
 
       {/* AVAILABILITY */}
       <h4>Availability</h4>
-
       <DatePicker
         multiple
         minDate={new Date()}
@@ -144,15 +191,37 @@ export default function DriverDashboard() {
         onChange={setSelectedDates}
         format="YYYY-MM-DD"
       />
-
       <button onClick={saveAvailability}>Save Availability</button>
+
       {message && <p>{message}</p>}
 
       <ul>
         {availability.map(d => <li key={d}>{d}</li>)}
       </ul>
 
-      {/* HIRES */}
+      {/* REQUEST OWNER ROLE */}
+      {!profile.is_owner && (
+        <>
+          <h4>Request Owner Role</h4>
+          <input
+            type="file"
+            accept="image/*,.pdf"
+            onChange={(e) => setLicenseFile(e.target.files?.[0] || null)}
+          />
+
+          {!ownerRequest && (
+            <button onClick={requestOwnerRole}>
+              Request Owner Role
+            </button>
+          )}
+
+          {ownerRequest?.status === "pending" && (
+            <p>Owner request pending admin approval</p>
+          )}
+        </>
+      )}
+
+      {/* HIRE REQUESTS */}
       <h4 style={{ marginTop: 30 }}>Hire Requests</h4>
 
       {hires.length === 0 && <p>No hire requests yet</p>}

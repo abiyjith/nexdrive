@@ -50,40 +50,36 @@ export default function AdminRequests() {
   }, []);
 
   const approveRequest = async (req: RoleRequest) => {
-  // 1️⃣ mark request approved
+  // 1️⃣ Update request
   await supabase
     .from("role_requests")
-    .update({ status: "approved", admin_note: null })
+    .update({
+      status: "approved",
+      admin_note: null,
+    })
     .eq("id", req.id);
 
-  // 2️⃣ update profile
-  await supabase
-    .from("profiles")
-    .update({ is_driver: true })
-    .eq("user_id", req.user_id);
+  // 2️⃣ Enable capability ONLY
+  if (req.requested_role === "driver") {
+    await supabase
+      .from("profiles")
+      .update({
+        is_driver: true,
+      })
+      .eq("user_id", req.user_id);
+  }
 
-  // 3️⃣ ensure drivers row exists
-  const { data: existingDriver } = await supabase
-    .from("drivers")
-    .select("id")
-    .eq("owner_id", req.user_id)
-    .maybeSingle();
-
-  if (!existingDriver) {
-    await supabase.from("drivers").insert({
-      owner_id: req.user_id,
-      name: "Not set",
-      license_number: "PENDING",
-      experience_years: 0,
-      price_per_day: 0,
-      available: false,
-      verified: true
-    });
+  if (req.requested_role === "owner") {
+    await supabase
+      .from("profiles")
+      .update({
+        is_owner: true,
+      })
+      .eq("user_id", req.user_id);
   }
 
   loadRequests();
 };
-
   const rejectRequest = async (req: RoleRequest) => {
     const note = noteMap[req.id] || "Request rejected";
 

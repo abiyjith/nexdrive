@@ -214,3 +214,19 @@
   cursor: pointer;
   font-weight: bold;
 }
+.upload-group {
+  margin-top: 14px;
+}
+
+.upload-label {
+  font-weight: bold;
+  color: #facc15;
+  display: block;
+  margin-bottom: 4px;
+}
+
+.upload-hint {
+  font-size: 12px;
+  color: #9ca3af;
+  margin-bottom: 6px;
+}
