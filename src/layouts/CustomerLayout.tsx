@@ -71,6 +71,7 @@ export default function CustomerLayout() {
           <NavLink to="/customer/vehicles">Vehicles</NavLink>
           <NavLink to="/customer/profile">Profile</NavLink>
           <NavLink to="/customer/dashboard">Dashboard</NavLink>
+          <NavLink to="/customer/bookings">Bookings</NavLink>
         </div>
 
         <button className="logout-btn" onClick={logout}>

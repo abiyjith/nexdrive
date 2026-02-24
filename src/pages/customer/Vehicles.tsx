@@ -9,51 +9,69 @@ export default function Vehicles() {
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
 
-  /* ================= LOAD VEHICLES ================= */
   useEffect(() => {
     loadVehicles();
   }, []);
 
-  const loadVehicles = async () => {
-    const { data, error } = await supabase
-      .from("vehicles")
-      .select("*")
-      .eq("verification_status", "approved")
-      .eq("is_active", true);
+ const loadVehicles = async () => {
+  const { data, error } = await supabase
+    .from("vehicles")
+    .select(`
+      id,
+      brand,
+      model,
+      price_per_day,
+      location_text,
+      vehicle_bookings (
+        id,
+        status
+      )
+    `)
+    .eq("verification_status", "approved")
+    .eq("is_active", true);
 
-    if (!error) {
-      setVehicles(data || []);
-    }
-  };
+  if (error) {
+    console.error(error);
+    return;
+  }
 
-  /* ================= BOOK VEHICLE ================= */
+  // 🚫 FILTER OUT VEHICLES WITH ACTIVE BOOKINGS
+  const available = (data || []).filter((v) =>
+    !v.vehicle_bookings?.some(
+      (b: any) => b.status === "pending" || b.status === "confirmed"
+    )
+  );
+
+  setVehicles(available);
+};
+
   const bookVehicle = async () => {
     if (!selectedVehicle || dates.length === 0) {
-      setMessage("Select vehicle and booking dates");
+      setMessage("Select booking dates");
       return;
     }
 
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) return;
+    const { data: auth } = await supabase.auth.getUser();
+    if (!auth.user) return;
 
     setLoading(true);
-    setMessage("");
 
-    const dateStrings = dates.map((d) => d.format("YYYY-MM-DD"));
-    const totalPrice =
-      dateStrings.length * Number(selectedVehicle.price_per_day);
+    const days = dates.map((d) => d.format("YYYY-MM-DD"));
+    const total = days.length * selectedVehicle.price_per_day;
 
-    const { error } = await supabase.from("vehicle_bookings").insert({
-      vehicle_id: selectedVehicle.id,
-      customer_id: user.id,
-      start_date: dateStrings[0],
-      end_date: dateStrings[dateStrings.length - 1],
-      status: "pending",
-      total_price: totalPrice,
-    });
+    const { data: booking, error } = await supabase
+      .from("vehicle_bookings")
+      .insert({
+        vehicle_id: selectedVehicle.id,
+        customer_id: auth.user.id,
+        start_date: days[0],
+        end_date: days[days.length - 1],
+        status: "pending",
+        payment_status: "unpaid",
+        total_price: total,
+      })
+      .select()
+      .single();
 
     if (error) {
       setMessage(error.message);
@@ -61,9 +79,23 @@ export default function Vehicles() {
       return;
     }
 
-    setMessage("✅ Vehicle booked successfully. Pay owner directly.");
-    setDates([]);
+    // create payment
+    await supabase.from("payments").insert({
+      booking_id: booking.id,
+      payer_id: auth.user.id,
+      amount: total,
+    });
+
+    // hide vehicle
+    await supabase
+      .from("vehicles")
+      .update({ is_active: false })
+      .eq("id", selectedVehicle.id);
+
+    setMessage("Booking successful. Await owner confirmation.");
     setSelectedVehicle(null);
+    setDates([]);
+    loadVehicles();
     setLoading(false);
   };
 
@@ -71,80 +103,45 @@ export default function Vehicles() {
     <div className="page-container">
       <h2 style={{ color: "#facc15" }}>Available Vehicles</h2>
 
-      {vehicles.length === 0 && <p>No vehicles available</p>}
-
       {vehicles.map((v) => (
         <div key={v.id} className="vehicle-card">
-          <h3>
-            {v.brand} {v.model}
-          </h3>
+          <h3>{v.brand} {v.model}</h3>
+          <p>₹ {v.price_per_day} / day</p>
 
-          <p>
-            <b>Type:</b> {v.vehicle_type}
-          </p>
-
-          <p>
-            <b>₹ {v.price_per_day}</b> / day
-          </p>
-
-          <p>
-            <b>Location:</b> {v.location_text}
-          </p>
-
-          <button
-            className="primary-btn"
-            onClick={() => {
-              setSelectedVehicle(v);
-              setDates([]);
-              setMessage("");
-            }}
-          >
+          <button onClick={() => setSelectedVehicle(v)}>
             Book Vehicle
           </button>
         </div>
       ))}
 
-      {/* ================= BOOKING BOX ================= */}
       {selectedVehicle && (
         <div className="booking-box">
           <h3>
-            Booking: {selectedVehicle.brand} {selectedVehicle.model}
+            Booking {selectedVehicle.brand} {selectedVehicle.model}
           </h3>
 
           <DatePicker
             multiple
-            minDate={new Date()}
             value={dates}
             onChange={setDates}
             format="YYYY-MM-DD"
           />
 
-          <p style={{ marginTop: 10 }}>
-            <b>Total:</b> ₹
-            {dates.length * Number(selectedVehicle.price_per_day)}
+          <p>
+            Total ₹{dates.length * selectedVehicle.price_per_day}
           </p>
 
-          <button
-            className="primary-btn"
-            disabled={loading}
-            onClick={bookVehicle}
-          >
-            {loading ? "Booking..." : "Confirm Booking"}
+          <button disabled={loading} onClick={bookVehicle}>
+            Confirm Booking
           </button>
 
-          <button
-            style={{ marginLeft: 10 }}
-            onClick={() => {
-              setSelectedVehicle(null);
-              setDates([]);
-            }}
-          >
+          <button onClick={() => setSelectedVehicle(null)}>
             Cancel
           </button>
         </div>
       )}
 
-      {message && <p style={{ marginTop: 15 }}>{message}</p>}
+      {message && <p>{message}</p>}
     </div>
   );
 }

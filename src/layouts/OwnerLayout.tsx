@@ -20,7 +20,7 @@ export default function OwnerLayout() {
           <NavLink to="/owner/dashboard">Dashboard</NavLink>
           <NavLink to="/owner/yourvehicles">Your Vehicles</NavLink>
           <NavLink to="/owner/addvehicle">Add Vehicle</NavLink> 
-          <NavLink to="/owner/bookings">Bookings</NavLink>
+         
         </div>
 
         <button className="logout-btn" onClick={logout}>

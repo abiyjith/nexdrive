@@ -15,6 +15,7 @@ import Drivers from "./pages/customer/Drivers";
 import Vehicles from "./pages/customer/Vehicles";
 import Profile from "./pages/customer/Profile";
 import CustomerDashboard from "./pages/dashboards/Customer";
+import CustomerBookings from "./pages/customer/Bookings";
 
 /* OWNER */
 import OwnerLayout from "./layouts/OwnerLayout";
@@ -61,6 +62,7 @@ export default function App() {
             <Route path="drivers" element={<Drivers />} />
             <Route path="vehicles" element={<Vehicles />} />
             <Route path="profile" element={<Profile />} />
+            <Route path="/customer/bookings" element={<CustomerBookings />} />
           </Route>
         </Route>
 

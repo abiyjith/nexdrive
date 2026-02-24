@@ -3,90 +3,69 @@ import { supabase } from "../../lib/supabase";
 
 export default function YourVehicles() {
   const [vehicles, setVehicles] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadVehicles();
+    load();
   }, []);
 
-  const loadVehicles = async () => {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+  const load = async () => {
+    const { data: auth } = await supabase.auth.getUser();
+    if (!auth.user) return;
 
-    if (!user) return;
-
-    const { data, error } = await supabase
+    const { data } = await supabase
       .from("vehicles")
-      .select("*")
-      .eq("owner_id", user.id)
-      .order("created_at", { ascending: false });
+      .select(`
+        id, brand, model, is_active,
+        vehicle_bookings (
+          id, start_date, end_date, status, payment_status,
+          profiles ( first_name, phone )
+        )
+      `)
+      .eq("owner_id", auth.user.id)
+      .order("created_at", { foreignTable: "vehicle_bookings", ascending: false });
 
-    if (!error) {
-      setVehicles(data || []);
-    }
-
-    setLoading(false);
+    setVehicles(data || []);
   };
 
-  if (loading) return <p>Loading vehicles...</p>;
+  const confirmPayment = async (bookingId: string, vehicleId: string) => {
+    await supabase
+      .from("vehicle_bookings")
+      .update({ payment_status: "confirmed", status: "confirmed" })
+      .eq("id", bookingId);
+
+    await supabase
+      .from("vehicles")
+      .update({ is_active: true })
+      .eq("id", vehicleId);
+
+    load();
+  };
 
   return (
     <div style={{ padding: 20 }}>
       <h2 style={{ color: "#facc15" }}>Your Vehicles</h2>
 
-      {vehicles.length === 0 && <p>No vehicles added yet</p>}
+      {vehicles.map((v) => (
+        <div key={v.id} className="vehicle-card">
+          <h3>{v.brand} {v.model}</h3>
+          <p>Status: {v.is_active ? "Available" : "Booked"}</p>
 
-      <div style={{ display: "grid", gap: 20 }}>
-        {vehicles.map((v) => (
-          <div key={v.id} className="vehicle-card">
-            {v.image_url && (
-              <img
-                src={
-                  supabase.storage
-                    .from("vehicle-images")
-                    .getPublicUrl(v.image_url).data.publicUrl
-                }
-                alt="vehicle"
-                style={{
-                  width: "100%",
-                  height: 180,
-                  objectFit: "cover",
-                  borderRadius: 8,
-                }}
-              />
-            )}
+          {v.vehicle_bookings.map((b: any) => (
+            <div key={b.id} style={{ marginTop: 10 }}>
+              <p>Customer: {b.profiles?.first_name}</p>
+              <p>Phone: {b.profiles?.phone}</p>
+              <p>{b.start_date} → {b.end_date}</p>
+              <p>Payment: {b.payment_status}</p>
 
-            <h3>
-              {v.brand} {v.model}
-            </h3>
-
-            <p>
-              <b>₹{v.price_per_day}</b> / day
-            </p>
-
-            <p>
-              <b>Vehicle No:</b> {v.vehicle_number}
-            </p>
-
-            <p>
-              <b>Status:</b>{" "}
-              <span
-                style={{
-                  color:
-                    v.verification_status === "approved"
-                      ? "lightgreen"
-                      : v.verification_status === "rejected"
-                      ? "red"
-                      : "#facc15",
-                }}
-              >
-                {v.verification_status}
-              </span>
-            </p>
-          </div>
-        ))}
-      </div>
+              {b.payment_status === "unpaid" && (
+                <button onClick={() => confirmPayment(b.id, v.id)}>
+                  Confirm Payment & Re-Enable Vehicle
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      ))}
     </div>
   );
 }
