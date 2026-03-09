@@ -1,61 +1,110 @@
-import { useEffect, useState } from "react";
-import { supabase } from "../../lib/supabase";
+import { useEffect,useState } from "react"
+import {
+collection,
+getDocs,
+doc,
+updateDoc
+} from "firebase/firestore"
 
-type Profile = {
-  user_id: string;
-  username: string;
-  email: string;
-  active_role: string;
-  is_driver: boolean;
-  is_owner: boolean;
-};
+import { db } from "../../lib/firebase"
+import { useNavigate } from "react-router-dom"
 
-function resolveRole(p: Profile) {
-  if (p.active_role === "admin") return "admin";
-  if (p.is_driver) return "driver";
-  if (p.is_owner) return "owner";
-  return "customer";
+import "../../styles/admin.css"
+
+export default function AdminUsers(){
+
+const navigate = useNavigate()
+
+const [users,setUsers] = useState<any[]>([])
+
+useEffect(()=>{
+
+const load = async()=>{
+
+const snap = await getDocs(collection(db,"users"))
+
+setUsers(
+snap.docs.map(d=>({id:d.id,...d.data()}))
+)
+
 }
 
-export default function AdminUsers() {
-  const [users, setUsers] = useState<Profile[]>([]);
-  const [filter, setFilter] = useState("all");
+load()
 
-  useEffect(() => {
-    loadUsers();
-  }, []);
+},[])
 
-  async function loadUsers() {
-    const { data } = await supabase
-      .from("profiles")
-      .select("user_id, username, email, active_role, is_driver, is_owner");
+const banUser = async(id:string)=>{
 
-    setUsers(data || []);
-  }
+await updateDoc(doc(db,"users",id),{
+banned:true
+})
 
-  const filtered = users.filter((u) =>
-    filter === "all" ? true : resolveRole(u) === filter
-  );
+alert("User banned")
 
-  return (
-    <div className="admin-page">
-      <h2>Users</h2>
+}
 
-      <select value={filter} onChange={(e) => setFilter(e.target.value)}>
-        <option value="all">All Roles</option>
-        <option value="customer">Customer</option>
-        <option value="driver">Driver</option>
-        <option value="owner">Owner</option>
-        <option value="admin">Admin</option>
-      </select>
+const unbanUser = async(id:string)=>{
 
-      {filtered.map((u) => (
-        <div key={u.user_id} className="card">
-          <p><b>Username:</b> {u.username}</p>
-          <p><b>Email:</b> {u.email}</p>
-          <p><b>Role:</b> {resolveRole(u)}</p>
-        </div>
-      ))}
-    </div>
-  );
+await updateDoc(doc(db,"users",id),{
+banned:false
+})
+
+alert("User unbanned")
+
+}
+
+return(
+
+<div className="admin-page">
+
+<button
+className="back-btn"
+onClick={()=>navigate("/admin")}
+>
+← Back to Dashboard
+</button>
+
+<h2>All Users</h2>
+
+<div className="admin-grid">
+
+{users.map(u=>(
+
+<div key={u.id} className="admin-card">
+
+<p><b>Email:</b> {u.email}</p>
+
+<p>
+<b>Status:</b>{" "}
+{u.banned ? (
+<span style={{color:"red"}}>Banned</span>
+):(
+<span style={{color:"green"}}>Active</span>
+)}
+</p>
+
+<button
+className="danger-btn"
+onClick={()=>banUser(u.id)}
+>
+Ban User
+</button>
+
+<button
+className="approve-btn"
+onClick={()=>unbanUser(u.id)}
+>
+Unban
+</button>
+
+</div>
+
+))}
+
+</div>
+
+</div>
+
+)
+
 }

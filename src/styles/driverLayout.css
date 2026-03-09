@@ -1,0 +1,67 @@
+.driver-layout {
+  min-height: 100vh;
+  background: radial-gradient(circle at top, #facc15 0%, #111 35%, #000 100%);
+  color: white;
+}
+
+.driver-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 24px;
+  border-bottom: 1px solid #333;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(6px);
+}
+
+.nav-left {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+}
+
+.brand {
+  font-size: 20px;
+  font-weight: bold;
+  color: #facc15;
+}
+
+.driver-nav a {
+  color: #ccc;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.driver-nav a.active {
+  color: #facc15;
+}
+
+.logout-btn {
+  background: #facc15;
+  color: black;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.logout-btn:hover {
+  background: #fde047;
+}
+
+.driver-content {
+  padding: 24px;
+  animation: fadeIn 0.5s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

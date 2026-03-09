@@ -1,6 +1,18 @@
-import { supabase } from "./supabase";
+import { signOut } from "firebase/auth"
+import { auth } from "./firebase"
 
-export async function logout() {
-  await supabase.auth.signOut();
-  localStorage.removeItem("active_role");
+export async function logout(){
+
+try{
+
+await signOut(auth)
+
+localStorage.removeItem("active_role")
+
+}catch(error){
+
+console.error("Logout error:",error)
+
+}
+
 }

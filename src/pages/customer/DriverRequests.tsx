@@ -1,89 +1,139 @@
-import { useEffect, useState } from "react";
-import { supabase } from "../../lib/supabase";
+import { useState } from "react"
+import {
+collection,
+addDoc,
+query,
+where,
+getDocs
+} from "firebase/firestore"
 
-export default function DriverRequests() {
-  const [requests, setRequests] = useState<any[]>([]);
+import {
+ref,
+uploadBytes,
+getDownloadURL
+} from "firebase/storage"
 
-  useEffect(() => {
-    load();
-  }, []);
+import { db, storage } from "../../lib/firebase"
+import { useAuth } from "../../context/AuthContext"
+import "../../styles/customer.css"
 
-  const load = async () => {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+export default function DriverRequests(){
 
-    if (!user) return;
+const { user } = useAuth()
 
-    const { data } = await supabase
-      .from("driver_hires")
-      .select("*")
-      .eq("driver_id", user.id)
-      .order("created_at", { ascending: false });
+const [role,setRole] = useState("driver")
+const [license,setLicense] = useState<File | null>(null)
+const [loading,setLoading] = useState(false)
 
-    setRequests(data || []);
-  };
+const submitRequest = async () => {
 
-  const getDatesInRange = (start: string, end: string) => {
-    const dates: string[] = [];
-    let current = new Date(start);
-    const last = new Date(end);
+if(!license){
 
-    while (current <= last) {
-      dates.push(current.toISOString().split("T")[0]);
-      current.setDate(current.getDate() + 1);
-    }
-    return dates;
-  };
+alert("Upload Driving License")
 
-  const acceptHire = async (r: any) => {
-    // 1️⃣ Accept hire
-    await supabase
-      .from("driver_hires")
-      .update({ status: "accepted" })
-      .eq("id", r.id);
+return
 
-    // 2️⃣ Remove availability for hired dates
-    const dates = getDatesInRange(r.start_date, r.end_date);
+}
 
-    await supabase
-      .from("driver_availability")
-      .delete()
-      .eq("driver_id", r.driver_id)
-      .in("available_date", dates);
+setLoading(true)
 
-    load();
-  };
+try{
 
-  const rejectHire = async (id: string) => {
-    await supabase
-      .from("driver_hires")
-      .update({ status: "rejected" })
-      .eq("id", id);
+const fileRef = ref(
+storage,
+`licenses/${user?.uid}_${Date.now()}`
+)
 
-    load();
-  };
+await uploadBytes(fileRef,license)
 
-  return (
-    <div className="profile-card">
-      <h2>Hire Requests</h2>
+const url = await getDownloadURL(fileRef)
 
-      {requests.length === 0 && <p>No hire requests.</p>}
+const q = query(
+collection(db,"role_requests"),
+where("user_id","==",user?.uid),
+where("role","==",role)
+)
 
-      {requests.map((r) => (
-        <div key={r.id} className="profile-card">
-          <p><b>From:</b> {r.start_date}</p>
-          <p><b>To:</b> {r.end_date}</p>
-          <p><b>Status:</b> {r.status}</p>
+const existing = await getDocs(q)
 
-          {r.status === "pending" && (
-            <>
-              <button onClick={() => acceptHire(r)}>Accept</button>
-              <button onClick={() => rejectHire(r.id)}>Reject</button>
-            </>
-          )}
-        </div>
-      ))}
-    </div>
-  );
+if(!existing.empty){
+
+alert("Request already submitted")
+
+setLoading(false)
+
+return
+
+}
+
+await addDoc(collection(db,"role_requests"),{
+
+user_id:user?.uid,
+role,
+license_url:url,
+status:"pending",
+admin_message:"",
+created_at:new Date()
+
+})
+
+alert("Request submitted")
+
+}catch(err){
+
+console.error(err)
+
+}
+
+setLoading(false)
+
+}
+
+return(
+
+<div className="page-container">
+
+<h2 className="page-title">
+
+Role Request
+
+</h2>
+
+<div className="form-card">
+
+<label>Role</label>
+
+<select
+value={role}
+onChange={(e)=>setRole(e.target.value)}
+>
+
+<option value="driver">Driver</option>
+<option value="owner">Owner</option>
+
+</select>
+
+<label>Upload Driving License</label>
+
+<input
+type="file"
+onChange={(e)=>setLicense(e.target.files?.[0] || null)}
+/>
+
+<button
+className="primary-btn"
+onClick={submitRequest}
+disabled={loading}
+>
+
+{loading ? "Submitting..." : "Submit Request"}
+
+</button>
+
+</div>
+
+</div>
+
+)
+
 }

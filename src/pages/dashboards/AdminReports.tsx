@@ -1,95 +1,46 @@
-import { useEffect, useState } from "react";
-import { supabase } from "../../lib/supabase";
+import { useEffect,useState } from "react"
+import { collection,getDocs } from "firebase/firestore"
+import { db } from "../../lib/firebase"
 
-export default function AdminReports() {
-  const [reports, setReports] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [message, setMessage] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+export default function AdminReports(){
 
-  useEffect(() => {
-    loadReports();
-  }, []);
+const [reports,setReports] = useState<any[]>([])
 
-  async function loadReports() {
-    const { data, error } = await supabase
-      .from("reports")
-      .select("*")
-      .order("created_at", { ascending: false });
+useEffect(()=>{
 
-    if (error) setError("Failed to load reports");
-    else setReports(data || []);
+const load = async()=>{
 
-    setLoading(false);
-  }
+const snap = await getDocs(collection(db,"reports"))
 
-  async function banUser(id: string) {
-    await supabase.from("profiles").update({ is_banned: true }).eq("user_id", id);
-    setMessage("User banned successfully");
-    loadReports();
-  }
+setReports(
+snap.docs.map(d=>({id:d.id,...d.data()}))
+)
 
-  async function unbanUser(id: string) {
-    await supabase.from("profiles").update({ is_banned: false }).eq("user_id", id);
-    setMessage("User unbanned successfully");
-    loadReports();
-  }
+}
 
-  async function deleteVehicle(id: string) {
-    await supabase.from("vehicles").delete().eq("id", id);
-    setMessage("Vehicle removed");
-    loadReports();
-  }
+load()
 
-  async function resolveReport(id: string) {
-    await supabase.from("reports").update({ status: "resolved" }).eq("id", id);
-    setMessage("Report resolved");
-    loadReports();
-  }
+},[])
 
-  if (loading) return <p>Loading...</p>;
+return(
 
-  return (
-    <div className="page">
-      <h2>🚨 Reports & Violations</h2>
+<div>
 
-      {message && <div className="alert success">{message}</div>}
-      {error && <div className="alert error">{error}</div>}
+<h2>User Reports</h2>
 
-      {reports.length === 0 && (
-        <div className="alert info">No reports available</div>
-      )}
+{reports.map(r=>(
 
-      {reports.map((r) => (
-        <div key={r.id} className="card">
-          <p><b>Type:</b> {r.target_type}</p>
-          <p><b>Reason:</b> {r.reason}</p>
-          <span className={`badge ${r.status}`}>{r.status}</span>
+<div key={r.id}>
 
-          <div style={{ marginTop: "12px" }}>
-            {r.target_type === "user" && (
-              <>
-                <button className="danger" onClick={() => banUser(r.target_id)}>
-                  Ban User
-                </button>
-                <button onClick={() => unbanUser(r.target_id)}>Unban</button>
-              </>
-            )}
+<p>Reported By: {r.reporter}</p>
+<p>Message: {r.message}</p>
 
-            {r.target_type === "vehicle" && (
-              <button className="danger" onClick={() => deleteVehicle(r.target_id)}>
-                Delete Vehicle
-              </button>
-            )}
+</div>
 
-            {r.status !== "resolved" && (
-              <button onClick={() => resolveReport(r.id)}>
-                Mark Resolved
-              </button>
-            )}
-          </div>
-        </div>
-      ))}
-    </div>
-  );
+))}
+
+</div>
+
+)
+
 }

@@ -1,0 +1,102 @@
+.navbar{
+display:flex;
+justify-content:space-between;
+align-items:center;
+padding:14px 30px;
+background:#0b0b0b;
+border-bottom:1px solid #1f1f1f;
+position:sticky;
+top:0;
+z-index:100;
+}
+
+/* LOGO */
+
+.logo{
+font-size:22px;
+font-weight:700;
+color:#facc15;
+cursor:pointer;
+letter-spacing:0.5px;
+}
+
+/* NAV LINKS */
+
+.nav-links{
+display:flex;
+gap:12px;
+align-items:center;
+}
+
+/* REMOVE LINK STYLES */
+
+.nav-links a{
+text-decoration:none;
+}
+
+/* NAV BUTTONS */
+
+.nav-links button{
+
+background:transparent;
+border:1px solid #2a2a2a;
+color:#e5e5e5;
+
+padding:7px 14px;
+border-radius:8px;
+
+font-size:14px;
+font-weight:500;
+
+cursor:pointer;
+
+transition:all .2s ease;
+
+}
+
+/* HOVER */
+
+.nav-links button:hover{
+
+background:#facc15;
+color:#000;
+border-color:#facc15;
+
+}
+
+/* ACTIVE PRESS */
+
+.nav-links button:active{
+transform:scale(.96);
+}
+
+/* RIGHT SIDE */
+
+.nav-right{
+display:flex;
+align-items:center;
+gap:12px;
+}
+
+/* LOGOUT */
+
+.logout-btn{
+
+background:#ef4444;
+color:white;
+
+border:none;
+padding:8px 16px;
+
+border-radius:8px;
+
+font-weight:600;
+cursor:pointer;
+
+transition:.2s;
+
+}
+
+.logout-btn:hover{
+background:#dc2626;
+}

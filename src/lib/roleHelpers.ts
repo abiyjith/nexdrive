@@ -1,13 +1,14 @@
-import { supabase } from "./supabase";
+import { doc,updateDoc } from "firebase/firestore"
+import { db } from "./firebase"
 
-export async function requestRole(role: "driver" | "owner", licenseUrl: string) {
-  const { data: auth } = await supabase.auth.getUser();
-  if (!auth.user) return;
+export async function switchRole(uid:string,role:string){
 
-  return supabase.from("role_requests").insert({
-    user_id: auth.user.id,
-    requested_role: role,
-    status: "pending",
-    license_url: licenseUrl
-  });
+await updateDoc(doc(db,"users",uid),{
+
+active_role:role
+
+})
+
+window.location.reload()
+
 }

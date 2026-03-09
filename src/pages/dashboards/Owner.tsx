@@ -1,189 +1,105 @@
-import { useEffect, useState } from "react";
-import { supabase } from "../../lib/supabase";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react"
+import { useAuth } from "../../context/AuthContext"
+import { switchRole } from "../../lib/roleHelpers"
+import { db } from "../../lib/firebase"
+import { doc, getDoc } from "firebase/firestore"
 
-type RoleRequest = {
-  requested_role: "driver" | "owner";
-  status: "pending" | "approved" | "rejected";
-  admin_note: string | null;
-};
+import "../../styles/owner.css"
 
-export default function OwnerDashboard() {
-  const navigate = useNavigate();
+export default function OwnerDashboard(){
 
-  const [profile, setProfile] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+const { user } = useAuth()
 
-  const [licenseFile, setLicenseFile] = useState<File | null>(null);
-  const [message, setMessage] = useState("");
+const [driverApproved,setDriverApproved] = useState(false)
+const [driverPending,setDriverPending] = useState(false)
 
-  const [driverRequest, setDriverRequest] = useState<RoleRequest | null>(null);
+/* LOAD USER ROLES */
 
-  /* ================= LOAD DATA ================= */
-  const loadData = async () => {
-    const { data: auth } = await supabase.auth.getUser();
-    if (!auth.user) return;
+useEffect(()=>{
 
-    // Profile
-    const { data: profileData } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("user_id", auth.user.id)
-      .single();
+loadUserRoles()
 
-    if (!profileData) return;
+},[user])
 
-    // Role requests
-    const { data: requests } = await supabase
-      .from("role_requests")
-      .select("requested_role, status, admin_note")
-      .eq("user_id", auth.user.id);
+const loadUserRoles = async()=>{
 
-    let updatedProfile = { ...profileData };
+if(!user) return
 
-    if (requests) {
-      const driverReq =
-        requests.find((r) => r.requested_role === "driver") || null;
+const snap = await getDoc(doc(db,"users",user.uid))
 
-      setDriverRequest(driverReq);
+if(!snap.exists()) return
 
-      // 🔄 AUTO-SYNC AFTER ADMIN APPROVAL
-      if (driverReq?.status === "approved" && !profileData.is_driver) {
-        await supabase
-          .from("profiles")
-          .update({ is_driver: true })
-          .eq("user_id", auth.user.id);
+const data = snap.data()
 
-        updatedProfile.is_driver = true;
-      }
-    }
+/* DRIVER ROLE CHECK */
 
-    setProfile(updatedProfile);
-    setLoading(false);
-  };
+if(data.roles?.includes("driver")){
+setDriverApproved(true)
+}
 
-  useEffect(() => {
-    loadData();
-  }, []);
+if(data.driver_request === "pending"){
+setDriverPending(true)
+}
 
-  /* ================= ROLE SWITCH ================= */
-  const handleRoleChange = async (role: string) => {
-    await supabase
-      .from("profiles")
-      .update({ active_role: role })
-      .eq("user_id", profile.user_id);
+}
 
-    setProfile({ ...profile, active_role: role });
+return(
 
-    if (role === "customer") navigate("/customer/dashboard");
-    if (role === "driver") navigate("/driver/dashboard");
-    if (role === "owner") navigate("/owner/dashboard");
-  };
+<div className="page">
 
-  /* ================= REQUEST DRIVER ROLE ================= */
-  const requestDriverRole = async () => {
-    if (!licenseFile) {
-      setMessage("Please upload license / ID proof");
-      return;
-    }
+<h2 className="title">Owner Dashboard</h2>
 
-    const filePath = `${profile.user_id}/driver-${Date.now()}-${licenseFile.name}`;
+<div className="card">
 
-    const { error: uploadError } = await supabase.storage
-      .from("licenses")
-      .upload(filePath, licenseFile);
+<h3>Switch Role</h3>
 
-    if (uploadError) {
-      setMessage("License upload failed");
-      return;
-    }
+<div style={{display:"flex",gap:"10px"}}>
 
-    const { data } = supabase.storage
-      .from("licenses")
-      .getPublicUrl(filePath);
+<button
+className="primary-btn"
+onClick={()=>switchRole(user!.uid,"customer")}
 
-    const { error } = await supabase.from("role_requests").insert({
-      user_id: profile.user_id,
-      requested_role: "driver",
-      status: "pending",
-      license_url: data.publicUrl,
-    });
+>
 
-    if (error) {
-      setMessage("Request already exists or failed");
-      return;
-    }
+Customer Mode </button>
 
-    setMessage("Driver role request sent");
-    loadData();
-  };
+{/* DRIVER ROLE BUTTON */}
 
-  if (loading || !profile) return null;
+{driverApproved && (
 
-  return (
-    <div className="profile-card">
-      <h2>Owner Dashboard</h2>
+<button
+className="primary-btn"
+onClick={()=>switchRole(user!.uid,"driver")}
 
-      <p>
-        <b>Name:</b> {profile.first_name} {profile.last_name}
-      </p>
-      <p>
-        <b>Email:</b> {profile.email}
-      </p>
-      <p>
-        <b>Active Role:</b> {profile.active_role}
-      </p>
+>
 
-      <hr />
+Driver Mode </button>
 
-      {/* 🔁 ROLE SWITCH */}
-      <h3>Switch Role</h3>
-      <select
-        value={profile.active_role}
-        onChange={(e) => handleRoleChange(e.target.value)}
-      >
-        <option value="customer">Customer</option>
-        {profile.is_driver && <option value="driver">Driver</option>}
-        {profile.is_owner && <option value="owner">Owner</option>}
-      </select>
+)}
 
-      <hr />
+{/* DRIVER REQUEST PENDING */}
 
-      {/* 📤 REQUEST DRIVER ROLE */}
-      {!profile.is_driver && (
-        <>
-          <h3>Request Driver Role</h3>
+{!driverApproved && driverPending && (
 
-          <input
-            type="file"
-            accept="image/*,.pdf"
-            onChange={(e) =>
-              setLicenseFile(e.target.files?.[0] || null)
-            }
-          />
+<span style={{color:"orange",fontWeight:"bold"}}>
+Driver Request Pending Approval </span>
 
-          <button onClick={requestDriverRole}>
-            Request Driver Role
-          </button>
+)}
 
-          {driverRequest?.status === "pending" && (
-            <p>Driver request pending admin approval</p>
-          )}
-        </>
-      )}
+</div>
 
-      {message && <p>{message}</p>}
+</div>
 
-      <hr />
+<div className="card">
 
-      {/* OWNER FEATURES */}
-      <h3>Owner Actions</h3>
-      <ul>
-        <li>Upload Vehicles</li>
-        <li>Manage Vehicle Availability</li>
-        <li>View Bookings</li>
-        <li>Track Earnings</li>
-      </ul>
-    </div>
-  );
+<h3>Your Role</h3>
+
+<p>Vehicle Owner</p>
+
+</div>
+
+</div>
+
+)
+
 }

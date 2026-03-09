@@ -1,20 +1,31 @@
-import { useAuth } from "../../context/AuthContext";
-import CustomerDashboard from "./Customer";
-import OwnerDashboard from "./Owner";
-import DriverDashboard from "./Driver";
-import AdminDashboard from "./Admin";
+import { useAuth } from "../../context/AuthContext"
+
+import CustomerDashboard from "./Customer"
+import OwnerDashboard from "./Owner"
+import DriverDashboard from "./Driver"
+import AdminDashboard from "./Admin"
 
 export default function DashboardRouter() {
-  const { role } = useAuth();
+
+  const { userData } = useAuth()
+
+  if (!userData) return null
+
+  const role = userData.active_role || "customer"
 
   switch (role) {
+
     case "admin":
-      return <AdminDashboard />;
+      return <AdminDashboard />
+
     case "owner":
-      return <OwnerDashboard />;
+      return <OwnerDashboard />
+
     case "driver":
-      return <DriverDashboard />;
+      return <DriverDashboard />
+
     default:
-      return <CustomerDashboard />;
+      return <CustomerDashboard />
   }
+
 }

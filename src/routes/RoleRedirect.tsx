@@ -1,46 +1,18 @@
-import { useEffect } from "react";
-import { supabase } from "../lib/supabase";
-import { useNavigate } from "react-router-dom";
+import { Navigate } from "react-router-dom"
+import { useAuth } from "../context/AuthContext"
 
 export default function RoleRedirect() {
-  const navigate = useNavigate();
 
-  useEffect(() => {
-    const redirect = async () => {
-      const { data: auth } = await supabase.auth.getUser();
-      if (!auth.user) {
-        navigate("/login");
-        return;
-      }
+  const { userData } = useAuth()
 
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("active_role")
-        .eq("user_id", auth.user.id)
-        .single();
+  if (!userData) return null
 
-      if (!profile) {
-        navigate("/login");
-        return;
-      }
+  const role = userData.active_role
 
-      switch (profile.active_role) {
-        case "admin":
-          navigate("/admin");
-          break;
-        case "owner":
-          navigate("/owner/dashboard");
-          break;
-        case "driver":
-          navigate("/driver/dashboard");
-          break;
-        default:
-          navigate("/customer/dashboard");
-      }
-    };
+  if (role === "customer") return <Navigate to="/customer" />
+  if (role === "driver") return <Navigate to="/driver" />
+  if (role === "owner") return <Navigate to="/owner" />
+  if (role === "admin") return <Navigate to="/admin" />
 
-    redirect();
-  }, [navigate]);
-
-  return null;
+  return <Navigate to="/customer" />
 }

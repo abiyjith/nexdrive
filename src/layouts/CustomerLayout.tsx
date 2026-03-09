@@ -1,87 +1,51 @@
-import { NavLink, Outlet, useNavigate } from "react-router-dom";
-import { supabase } from "../lib/supabase";
-import { useEffect, useState } from "react";
-import "../styles/customer.css";
+import { Link, Outlet } from "react-router-dom"
+import { useAuth } from "../context/AuthContext"
+import DashboardNavbar from "../components/DashboardNavbar"
 
-export default function CustomerLayout() {
-  const navigate = useNavigate();
-  const [loading, setLoading] = useState(true);
+import "../styles/navbar.css"
 
-  useEffect(() => {
-    const init = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+export default function CustomerLayout(){
+    
+return(
 
-      if (!user) {
-        navigate("/login", { replace: true });
-        return;
-      }
+<>
+<DashboardNavbar/>
+<Outlet/>
+</>
 
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("active_role")
-        .eq("user_id", user.id)
-        .single();
+)
 
-      if (!profile) {
-        navigate("/login", { replace: true });
-        return;
-      }
+const { logout } = useAuth()
 
-      // 🚨 HARD REDIRECTS — NO MIXING ROLES
-      if (profile.active_role === "driver") {
-        navigate("/driver/dashboard", { replace: true });
-        return;
-      }
+return(
 
-      if (profile.active_role === "owner") {
-        navigate("/owner/dashboard", { replace: true });
-        return;
-      }
+<div className="layout">
 
-      if (profile.active_role === "admin") {
-        navigate("/admin", { replace: true });
-        return;
-      }
+<nav className="navbar">
 
-      // customer stays here
-      setLoading(false);
-    };
+<h2 className="logo">NexDrive</h2>
 
-    init();
-  }, [navigate]);
+<div className="nav-links">
 
-  const logout = async () => {
-    await supabase.auth.signOut();
-    localStorage.clear();
-    navigate("/login", { replace: true });
-  };
+<Link to="/customer/dashboard">Dashboard</Link>
+<Link to="/customer/drivers">Drivers</Link>
+<Link to="/customer/vehicles">Vehicles</Link>
+<Link to="/customer/bookings">Bookings</Link>
+<Link to="/customer/profile">Profile</Link>
 
-  if (loading) return null;
+<button className="btn btn-danger" onClick={logout}>
+Logout
+</button>
+</div>
 
-  return (
-    <div className="customer-root">
-      <nav className="customer-navbar">
-        <div className="nav-logo">P2P Rentals</div>
+</nav>
 
-        <div className="nav-links">
-          <NavLink to="/customer/home">Home</NavLink>
-          <NavLink to="/customer/drivers">Drivers</NavLink>
-          <NavLink to="/customer/vehicles">Vehicles</NavLink>
-          <NavLink to="/customer/profile">Profile</NavLink>
-          <NavLink to="/customer/dashboard">Dashboard</NavLink>
-          <NavLink to="/customer/bookings">Bookings</NavLink>
-        </div>
+<div className="page-content">
+<Outlet/>
+</div>
 
-        <button className="logout-btn" onClick={logout}>
-          Logout
-        </button>
-      </nav>
+</div>
 
-      <main className="customer-content">
-        <Outlet />
-      </main>
-    </div>
-  );
+)
+
 }

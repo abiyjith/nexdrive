@@ -1,244 +1,112 @@
-/* ===============================
-   GLOBAL
-================================ */
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-  font-family: "Segoe UI", sans-serif;
+body{
+margin:0;
+font-family:Inter, sans-serif;
+background:#0f0f0f;
+color:white;
 }
 
-body {
-  background: #000;
-  color: #fff;
+.page{
+
+max-width:1200px;
+margin:auto;
+padding:40px 20px;
+
+animation:fade .4s ease;
+
 }
 
-/* ===============================
-   NAVBAR
-================================ */
-.navbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 14px 30px;
-  border-bottom: 2px solid #facc15;
+.grid{
+
+display:grid;
+grid-template-columns:repeat(auto-fit,minmax(280px,1fr));
+gap:25px;
+
 }
 
-.navbar h2 {
-  color: #facc15;
-  font-weight: bold;
+.card{
+
+background:#161616;
+padding:25px;
+border-radius:14px;
+
+box-shadow:0 5px 25px rgba(0,0,0,.4);
+
+transition:.3s;
+
 }
 
-.nav-links {
-  display: flex;
-  align-items: center;
-  gap: 20px;
+.card:hover{
+
+transform:translateY(-5px);
+box-shadow:0 12px 35px rgba(0,0,0,.7);
+
 }
 
-.nav-links a {
-  color: white;
-  text-decoration: none;
-  font-weight: 500;
+.title{
+
+font-size:28px;
+margin-bottom:25px;
+text-align:center;
+color:#facc15;
+
 }
 
-.nav-links a:hover {
-  color: #facc15;
+.primary-btn{
+
+background:#facc15;
+color:black;
+border:none;
+padding:10px 18px;
+border-radius:8px;
+cursor:pointer;
+font-weight:600;
+
+transition:.2s;
+
 }
 
-.nav-links select {
-  background: #000;
-  color: #facc15;
-  border: 1px solid #facc15;
-  padding: 6px 10px;
-  border-radius: 6px;
-  cursor: pointer;
+.primary-btn:hover{
+
+background:#fde047;
+transform:scale(1.05);
+
 }
 
-.nav-links button {
-  background: #facc15;
-  border: none;
-  padding: 8px 14px;
-  font-weight: bold;
-  cursor: pointer;
-  border-radius: 6px;
+.danger-btn{
+
+background:#ef4444;
+color:white;
+border:none;
+padding:10px 18px;
+border-radius:8px;
+cursor:pointer;
+
 }
 
-/* ===============================
-   AUTH (LOGIN / REGISTER)
-================================ */
-.auth-container {
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+input,select{
+
+width:100%;
+padding:10px;
+border-radius:8px;
+border:1px solid #333;
+background:#111;
+color:white;
+margin-bottom:12px;
+
 }
 
-.auth-card {
-  width: 360px;
-  background: #111;
-  padding: 30px;
-  border-radius: 14px;
-  box-shadow: 0 0 25px rgba(250, 204, 21, 0.2);
+.center{
+
+text-align:center;
+
 }
 
-.auth-title {
-  text-align: center;
-  color: #facc15;
-  margin-bottom: 20px;
+@keyframes fade{
+
+from{opacity:0;transform:translateY(10px)}
+to{opacity:1;transform:translateY(0)}
+
 }
-
-.auth-card input {
-  width: 100%;
-  margin-bottom: 12px;
-  padding: 10px;
-  background: #000;
-  border: 1px solid #333;
-  color: #fff;
-  border-radius: 8px;
-}
-
-.password-field {
-  position: relative;
-}
-
-.eye-icon {
-  position: absolute;
-  right: 10px;
-  top: 50%;
-  transform: translateY(-50%);
-  cursor: pointer;
-}
-
-.auth-btn {
-  width: 100%;
-  background: #facc15;
-  border: none;
-  padding: 10px;
-  border-radius: 8px;
-  font-weight: bold;
-  cursor: pointer;
-}
-
-.auth-error {
-  color: #f87171;
-  margin-bottom: 10px;
-  font-size: 14px;
-}
-
-.auth-footer {
-  margin-top: 15px;
-  text-align: center;
-}
-
-.auth-link {
-  color: #facc15;
-  text-decoration: none;
-}
-
-/* ===============================
-   DASHBOARD CARD
-================================ */
-.dashboard-card {
-  background: #111;
-  margin: 30px;
-  padding: 25px;
-  border-radius: 14px;
-  width: 420px;
-  box-shadow: 0 0 20px rgba(250, 204, 21, 0.15);
-}
-
-.dashboard-card h2 {
-  color: #facc15;
-  margin-bottom: 15px;
-}
-
-.dashboard-card h3 {
-  color: #facc15;
-  margin-top: 20px;
-}
-
-.dashboard-card p {
-  margin: 6px 0;
-}
-
-.dashboard-card hr {
-  margin: 20px 0;
-  border: 1px solid #333;
-}
-
-/* ===============================
-   FORMS INSIDE DASHBOARD / PROFILE
-================================ */
-.dashboard-card input,
-.dashboard-card textarea {
-  width: 100%;
-  margin-bottom: 10px;
-  padding: 10px;
-  background: #000;
-  border: 1px solid #333;
-  color: #fff;
-  border-radius: 8px;
-}
-
-.dashboard-card button {
-  background: #facc15;
-  border: none;
-  padding: 10px 14px;
-  border-radius: 8px;
-  font-weight: bold;
-  cursor: pointer;
-  margin-top: 10px;
-}
-
-/* ===============================
-   REQUEST / LIST CARDS
-================================ */
-.request-card {
-  background: #000;
-  padding: 12px;
-  border-radius: 10px;
-  margin-top: 12px;
-  border: 1px solid #333;
-}
-
-.request-card p {
-  font-size: 14px;
-}
-
-/* ===============================
-   CUSTOMER / DRIVER / OWNER PAGE
-================================ */
-.page-container {
-  padding: 30px;
-}
-
-/* ===============================
-   BUTTON COLORS
-================================ */
-.btn-green {
-  background: #16a34a;
-  color: white;
-}
-
-.btn-red {
-  background: #dc2626;
-  color: white;
-}
-
-/* ===============================
-   RESPONSIVE
-================================ */
-@media (max-width: 600px) {
-  .dashboard-card {
-    width: 90%;
-    margin: 20px auto;
-  }
-
-  .auth-card {
-    width: 90%;
-  }
-
-  .nav-links {
-    gap: 10px;
-  }
+body:not(.admin-page) {
+  font-family: 'Orbitron', sans-serif;
 }

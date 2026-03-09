@@ -11,7 +11,10 @@
   "dependencies": {
     "@react-google-maps/api": "^2.20.8",
     "@supabase/supabase-js": "^2.39.0",
+    "date-fns": "^4.1.0",
+    "firebase": "^12.9.0",
     "react": "^18.2.0",
+    "react-date-range": "^2.0.1",
     "react-dom": "^18.2.0",
     "react-icons": "^5.5.0",
     "react-multi-date-picker": "^4.5.2",

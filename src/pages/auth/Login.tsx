@@ -1,78 +1,58 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { supabase } from "../../lib/supabase";
+import { useAuth } from "../../context/AuthContext";
+import { useNavigate, Link } from "react-router-dom";
 import "../../styles/auth.css";
 
 export default function Login() {
-  const [username, setUsername] = useState("");
+  const { login } = useAuth();
+  const nav = useNavigate();
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [showPwd, setShowPwd] = useState(false);
+  const [show, setShow] = useState(false);
   const [error, setError] = useState("");
-  const navigate = useNavigate();
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
-
-    // 1️⃣ Get email via secure RPC
-    const { data: email, error: rpcError } = await supabase
-      .rpc("get_email_by_username", { u: username });
-
-    if (rpcError || !email) {
+  const submit = async () => {
+    try {
+      await login(email, password);
+      nav("/");
+    } catch {
       setError("Invalid credentials");
-      return;
     }
-
-    // 2️⃣ Login using Auth (SOURCE OF TRUTH)
-    const { error: authError } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-
-    if (authError) {
-      setError("Invalid credentials");
-      return;
-    }
-
-    navigate("/");
   };
 
   return (
-    <div className="auth-container">
-      <form className="auth-card" onSubmit={handleLogin}>
+    <div className="auth-bg">
+      <div className="auth-card animate-scale">
         <h2 className="auth-title">Login</h2>
-
-        <input
-          placeholder="Username"
-          value={username}
-          onChange={e => setUsername(e.target.value)}
-          required
-        />
-
-        <div className="password-field">
-          <input
-            type={showPwd ? "text" : "password"}
-            placeholder="Password"
-            value={password}
-            onChange={e => setPassword(e.target.value)}
-            required
-          />
-          <span className="eye-icon" onClick={() => setShowPwd(!showPwd)}>
-            {showPwd ? "🙈" : "👁️"}
-          </span>
-        </div>
 
         {error && <p className="auth-error">{error}</p>}
 
-        <button className="auth-btn">Login</button>
+        <div className="input-group">
+  <input
+    placeholder="Email"
+    value={email}
+    onChange={(e) => setEmail(e.target.value)}
+  />
+</div>
 
-        <p className="auth-footer">
-          Don’t have an account?{" "}
-          <Link className="auth-link" to="/register">
-            Register
-          </Link>
-        </p>
-      </form>
+        <div className="input-group">
+          <input
+            type={show ? "text" : "password"}
+            placeholder="Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+          <span className="eye" onClick={() => setShow(!show)}>
+            👁
+          </span>
+        </div>
+
+        <button onClick={submit}>Login</button>
+
+        <div className="auth-footer">
+          Don’t have an account? <Link to="/register">Register</Link>
+        </div>
+      </div>
     </div>
   );
 }

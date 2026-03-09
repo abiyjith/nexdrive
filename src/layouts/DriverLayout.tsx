@@ -1,68 +1,33 @@
-import { NavLink, Outlet, useNavigate } from "react-router-dom";
-import { supabase } from "../lib/supabase";
-import { useEffect, useState } from "react";
-import "../styles/driver.css";
+import { Outlet, Navigate } from "react-router-dom"
+import DashboardNavbar from "../components/DashboardNavbar"
+import { useAuth } from "../context/AuthContext"
 
-export default function DriverLayout() {
-  const navigate = useNavigate();
-  const [loading, setLoading] = useState(true);
+export default function DriverLayout(){
 
-  useEffect(() => {
-    const init = async () => {
-      const { data } = await supabase.auth.getUser();
-      if (!data.user) {
-        navigate("/login", { replace: true });
-        return;
-      }
+const { userData, loading } = useAuth()
 
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("active_role, is_driver, is_owner")
-        .eq("user_id", data.user.id)
-        .single();
+if(loading) return null
 
-      if (!profile || !profile.is_driver) {
-        navigate("/customer/dashboard", { replace: true });
-        return;
-      }
+/* BLOCK ACCESS IF NOT DRIVER */
 
-      if (profile.active_role !== "driver") {
-        navigate(`/${profile.active_role}/dashboard`, { replace: true });
-        return;
-      }
+if(userData?.active_role !== "driver"){
+return <Navigate to="/" />
+}
 
-      setLoading(false);
-    };
+return(
 
-    init();
-  }, [navigate]);
+<div>
 
-  const logout = async () => {
-    await supabase.auth.signOut();
-    localStorage.clear();
-    navigate("/login", { replace: true });
-  };
+<DashboardNavbar/>
 
-  if (loading) return null;
+<div className="page-container">
 
-  return (
-    <div className="driver-root">
-      <nav className="driver-navbar">
-        <div className="nav-logo">P2P Rentals</div>
+<Outlet/>
 
-        <div className="nav-links">
-          <NavLink to="/driver/dashboard">Dashboard</NavLink>
-          <NavLink to="/driver/profile">Profile</NavLink>
-        </div>
+</div>
 
-        <button className="logout-btn" onClick={logout}>
-          Logout
-        </button>
-      </nav>
+</div>
 
-      <main className="driver-content">
-        <Outlet />
-      </main>
-    </div>
-  );
+)
+
 }

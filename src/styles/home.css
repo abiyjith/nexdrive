@@ -1,0 +1,13 @@
+.vehicle-list{
+display:grid;
+grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+gap:20px;
+}
+
+.vehicle-card{
+background:#111;
+border:1px solid #facc15;
+padding:20px;
+border-radius:10px;
+text-align:center;
+}

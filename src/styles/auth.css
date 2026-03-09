@@ -1,92 +1,191 @@
-.auth-container {
+/* ===============================
+AUTH BACKGROUND
+=============================== */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+.logo-container img{
+     height: 64px;
+    width: 121px;
+    border-radius: 38px;
+    object-fit: fill;
+}
+.logo-container {
+    display: flex;
+   align-items:center; ;
+}
+.auth-bg {
   min-height: 100vh;
-  background: black;
+
+  background-image: url("../assets/auth-bg.png");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+
   display: flex;
   align-items: center;
   justify-content: center;
-}
 
-/* CARD */
-.auth-card {
-  background: #111;
-  padding: 30px;
-  border-radius: 10px;
-  width: 350px; /* FIXED WIDTH — NO STRETCH */
-  color: white;
-  box-shadow: 0 0 15px rgba(255, 255, 0, 0.2);
-}
-
-/* TITLES */
-.auth-title {
-  color: yellow;
-  text-align: center;
-  margin-bottom: 5px;
-}
-
-.auth-subtitle {
-  text-align: center;
-  font-size: 14px;
-  margin-bottom: 20px;
-}
-
-/* INPUTS */
-.auth-card input {
-  width: 100%;
-  padding: 10px;
-  border-radius: 6px;
-  border: none;
-  margin-bottom: 15px;
-  background: #000;
-  color: white;
-}
-
-/* PASSWORD FIELD (MATCH JSX) */
-.password-wrapper {
   position: relative;
+  
+}
+.auth-bg::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+
+  background: rgba(0,0,0,0.65);
+
+  z-index: 0;
 }
 
-.password-wrapper input {
-  padding-right: 40px;
+/* ===============================
+AUTH CARD
+=============================== */
+
+.auth-card {
+  background: #000;
+  border: 2px solid #facc15;
+
+  padding: 34px;
+  width: 360px;
+
+  border-radius: 16px;
+
+  box-shadow: 0 0 40px rgba(250, 204, 21, 0.35);
+
+  animation: pop 0.4s ease;
+
+  display: flex;
+  flex-direction: column;
+
+  position: relative;
+  z-index: 2;
 }
 
-/* EYE ICON (MATCH JSX) */
+/* ===============================
+TITLE
+=============================== */
+
+.auth-title {
+  text-align: center;
+  color: #facc15;
+  font-size: 22px;
+  font-weight: 600;
+  margin-bottom: 22px;
+}
+
+/* ===============================
+INPUT WRAPPER
+=============================== */
+
+.input-group {
+  position: relative;
+  width: 100%;
+  margin-bottom: 14px;
+}
+
+/* ===============================
+INPUT
+=============================== */
+
+.input-group input {
+  width: 100%;
+  padding: 12px 40px 12px 14px;
+  background: #111;
+  color: #eee;
+  border: 1px solid #333;
+  border-radius: 8px;
+  font-size: 14px;
+  outline: none;
+  transition: 0.2s;
+}
+
+/* INPUT FOCUS */
+
+.input-group input:focus {
+  border-color: #facc15;
+  box-shadow: 0 0 6px rgba(250, 204, 21, 0.6);
+}
+
+/* ===============================
+PASSWORD ICON
+=============================== */
+
 .eye {
   position: absolute;
-  right: 10px;
+  right: 12px;
   top: 50%;
   transform: translateY(-50%);
   cursor: pointer;
-  color: #ccc;
+  color: #aaa;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
 }
 
-/* BUTTON */
-.auth-btn,
+/* ===============================
+BUTTON
+=============================== */
+
 .auth-card button {
-  width: 100%;
-  background: yellow;
-  color: black;
+  background: #facc15;
   border: none;
-  padding: 10px;
-  font-weight: bold;
+  width: 100%;
+  padding: 12px;
+  font-weight: 600;
+  border-radius: 8px;
   cursor: pointer;
-  border-radius: 6px;
-}
-
-/* ERROR */
-.auth-error {
-  color: red;
   font-size: 14px;
-  margin-bottom: 10px;
+  transition: 0.2s;
 }
 
-/* FOOTER */
+.auth-card button:hover {
+  background: #eab308;
+}
+
+/* ===============================
+ERROR MESSAGE
+=============================== */
+
+.auth-error {
+  color: #f87171;
+  margin-bottom: 12px;
+  font-size: 13px;
+}
+
+/* ===============================
+FOOTER
+=============================== */
+
 .auth-footer {
   text-align: center;
-  margin-top: 15px;
-  font-size: 14px;
+  margin-top: 16px;
+  font-size: 13px;
 }
 
-.auth-link {
-  color: yellow;
+.auth-footer a {
+  color: #a855f7;
   text-decoration: none;
+}
+
+.auth-footer a:hover {
+  text-decoration: underline;
+}
+
+/* ===============================
+ANIMATION
+=============================== */
+
+@keyframes pop {
+  from {
+    transform: scale(0.85);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
 }

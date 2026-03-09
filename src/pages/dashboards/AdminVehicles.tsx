@@ -1,67 +1,46 @@
-import { useEffect, useState } from "react";
-import { supabase } from "../../lib/supabase";
+import { useEffect,useState } from "react"
+import { collection,getDocs } from "firebase/firestore"
+import { db } from "../../lib/firebase"
 
-export default function AdminVehicles() {
-  const [vehicles, setVehicles] = useState<any[]>([]);
+export default function AdminVehicles(){
 
-  useEffect(() => {
-    loadVehicles();
-  }, []);
+const [trips,setTrips] = useState<any[]>([])
 
-  async function loadVehicles() {
-    const { data } = await supabase
-      .from("vehicles")
-      .select("*")
-      .eq("verification_status", "pending");
+useEffect(()=>{
 
-    setVehicles(data || []);
-  }
+const load = async()=>{
 
-  async function approve(id: string) {
-    await supabase
-      .from("vehicles")
-      .update({ verification_status: "approved" })
-      .eq("id", id);
+const snap = await getDocs(collection(db,"vehicle_bookings"))
 
-    loadVehicles();
-  }
+setTrips(
+snap.docs.map(d=>({id:d.id,...d.data()}))
+)
 
-  async function reject(id: string) {
-    await supabase
-      .from("vehicles")
-      .update({ verification_status: "rejected" })
-      .eq("id", id);
+}
 
-    loadVehicles();
-  }
+load()
 
-  return (
-    <div className="admin-page">
-      <h2>Vehicle RC Verification</h2>
+},[])
 
-      {vehicles.length === 0 && <p>No vehicles pending verification.</p>}
+return(
 
-      {vehicles.map((v) => (
-        <div key={v.id} className="card">
-          <p><b>Vehicle:</b> {v.brand} {v.model}</p>
-          <p><b>Number:</b> {v.vehicle_number}</p>
+<div>
 
-          <a
-            href={supabase.storage
-              .from("licenses")
-              .getPublicUrl(v.rc_url).data.publicUrl}
-            target="_blank"
-            rel="noreferrer"
-          >
-            View RC
-          </a>
+<h2>Vehicle Trips</h2>
 
-          <br /><br />
+{trips.map(t=>(
 
-          <button onClick={() => approve(v.id)}>Approve</button>
-          <button onClick={() => reject(v.id)}>Reject</button>
-        </div>
-      ))}
-    </div>
-  );
+<div key={t.id}>
+
+<p>Vehicle: {t.vehicle_id}</p>
+<p>Customer: {t.customer_id}</p>
+
+</div>
+
+))}
+
+</div>
+
+)
+
 }

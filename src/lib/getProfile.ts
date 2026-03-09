@@ -1,23 +1,12 @@
-import { supabase } from "./supabase";
+// src/lib/getProfile.ts
+// Firebase-based replacement for Supabase getProfile
+
+import { getCurrentUser, getUserProfile } from "./auth";
 
 export async function getProfile() {
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
+  const user = await getCurrentUser();
   if (!user) return null;
 
-  const { data, error } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("user_id", user.id)
-    .single();
-
-  if (error) return null;
-
-  // 🔥 FORCE single role source
-  return {
-    ...data,
-    active_role: data.role,
-  };
+  const profile = await getUserProfile(user.uid);
+  return profile;
 }

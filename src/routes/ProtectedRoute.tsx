@@ -1,43 +1,23 @@
-import { Navigate, Outlet } from "react-router-dom";
-import { useEffect, useState } from "react";
-import { supabase } from "../lib/supabase";
+import { Navigate, Outlet } from "react-router-dom"
+import { useAuth } from "../context/AuthContext"
 
-export default function ProtectedRoute({ roleRequired }: { roleRequired?: string }) {
-  const [loading, setLoading] = useState(true);
-  const [profile, setProfile] = useState<any>(null);
+interface Props {
+  roleRequired?: string
+}
 
-  useEffect(() => {
-    const load = async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
+export default function ProtectedRoute({ roleRequired }: Props) {
 
-      if (!session?.user) {
-        setLoading(false);
-        return;
-      }
+  const { user, userData, loading } = useAuth()
 
-      const { data } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("user_id", session.user.id)
-        .single();
+  if (loading) return null
 
-      setProfile(data);
-      setLoading(false);
-    };
-
-    load();
-  }, []);
-
-  // ⛔ CRITICAL: DO NOTHING WHILE LOADING
-  if (loading) return null;
-
-  if (!profile) return <Navigate to="/login" replace />;
-
-  if (roleRequired && profile.active_role !== roleRequired) {
-    return <Navigate to="/" replace />;
+  if (!user) {
+    return <Navigate to="/login" />
   }
 
-  return <Outlet />;
+  if (roleRequired && userData?.active_role !== roleRequired) {
+    return <Navigate to="/" />
+  }
+
+  return <Outlet />
 }

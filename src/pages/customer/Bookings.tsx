@@ -1,92 +1,293 @@
-import { useEffect, useState } from "react";
-import { supabase } from "../../lib/supabase";
+import { useEffect, useState } from "react"
+import {
+collection,
+query,
+where,
+getDocs,
+getDoc,
+doc,
+addDoc,
+deleteDoc
+} from "firebase/firestore"
 
-export default function CustomerBookings() {
-  const [bookings, setBookings] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+import { db } from "../../lib/firebase"
+import { useAuth } from "../../context/AuthContext"
 
-  useEffect(() => {
-    loadBookings();
-  }, []);
+import "../../styles/ui.css"
 
-  const loadBookings = async () => {
-    setLoading(true);
+export default function Bookings(){
 
-    const { data: auth } = await supabase.auth.getUser();
-    if (!auth.user) return;
+const {user}=useAuth()
 
-    const { data, error } = await supabase
-      .from("vehicle_bookings")
-      .select(`
-        id,
-        start_date,
-        end_date,
-        status,
-        payment_status,
-        vehicles (
-          brand,
-          model,
-          price_per_day
-        )
-      `)
-      .eq("customer_id", auth.user.id)
-      .order("created_at", { ascending: false });
+const [driverBookings,setDriverBookings]=useState<any[]>([])
+const [vehicleBookings,setVehicleBookings]=useState<any[]>([])
 
-    if (!error) {
-      setBookings(data || []);
-    }
+useEffect(()=>{
+loadDriverBookings()
+loadVehicleBookings()
+},[])
 
-    setLoading(false);
-  };
+/* DRIVER BOOKINGS */
 
-  if (loading) {
-    return <p style={{ padding: 20 }}>Loading bookings...</p>;
-  }
+const loadDriverBookings=async()=>{
 
-  return (
-    <div style={{ padding: 20 }}>
-      <h2 style={{ color: "#facc15" }}>My Vehicle Bookings</h2>
+if(!user) return
 
-      {bookings.length === 0 && (
-        <p>You have not booked any vehicles yet.</p>
-      )}
+const q=query(
+collection(db,"driver_bookings"),
+where("customer_id","==",user.uid)
+)
 
-      {bookings.map((b) => (
-        <div
-          key={b.id}
-          className="vehicle-card"
-          style={{ marginBottom: 20 }}
-        >
-          <h3>
-            {b.vehicles?.brand} {b.vehicles?.model}
-          </h3>
+const snap=await getDocs(q)
 
-          <p>
-            <b>Dates:</b> {b.start_date} → {b.end_date}
-          </p>
+const list:any[]=[]
 
-          <p>
-            <b>Status:</b> {b.status}
-          </p>
+for(const d of snap.docs){
 
-          <p>
-            <b>Payment:</b>{" "}
-            {b.payment_status === "pending" ? (
-              <span style={{ color: "orange" }}>Not Paid</span>
-            ) : b.payment_status === "paid" ? (
-              <span style={{ color: "yellow" }}>Paid (Waiting confirmation)</span>
-            ) : (
-              <span style={{ color: "lightgreen" }}>Confirmed</span>
-            )}
-          </p>
+const data=d.data()
 
-          {b.payment_status === "pending" && (
-            <p style={{ color: "red" }}>
-              ⚠ Payment pending. Please pay the owner.
-            </p>
-          )}
-        </div>
-      ))}
-    </div>
-  );
+const driverSnap=await getDoc(doc(db,"users",data.driver_id))
+
+const driverName=driverSnap.exists()
+? driverSnap.data().first_name
+: "Driver"
+
+const driverEmail=driverSnap.exists()
+? driverSnap.data().email
+: ""
+
+list.push({
+id:d.id,
+...data,
+driverName,
+driverEmail
+})
+
+}
+
+setDriverBookings(list)
+
+}
+
+/* VEHICLE BOOKINGS */
+
+const loadVehicleBookings=async()=>{
+
+if(!user) return
+
+const q=query(
+collection(db,"vehicle_bookings"),
+where("customer_id","==",user.uid)
+)
+
+const snap=await getDocs(q)
+
+const list:any[]=[]
+
+for(const d of snap.docs){
+
+const data=d.data()
+
+let vehicleName="Vehicle"
+
+if(data.vehicle_id){
+
+const vSnap=await getDoc(doc(db,"vehicles",data.vehicle_id))
+
+if(vSnap.exists()){
+vehicleName=
+vSnap.data().brand+" "+vSnap.data().model
+}
+
+}
+
+list.push({
+id:d.id,
+...data,
+vehicleName
+})
+
+}
+
+setVehicleBookings(list)
+
+}
+
+/* REPORT DRIVER */
+
+const reportDriver=async(driverId:string,bookingId:string)=>{
+
+const reason=prompt("Enter report reason")
+
+if(!reason) return
+
+await addDoc(collection(db,"reports"),{
+
+driver_id:driverId,
+customer_id:user?.uid,
+booking_id:bookingId,
+reason,
+created_at:new Date(),
+status:"pending"
+
+})
+
+alert("Driver reported")
+
+}
+
+/* DELETE DRIVER BOOKING */
+
+const deleteBooking=async(id:string)=>{
+
+const confirmDelete=window.confirm("Delete this completed booking?")
+
+if(!confirmDelete) return
+
+await deleteDoc(doc(db,"driver_bookings",id))
+
+loadDriverBookings()
+
+}
+
+return(
+
+<div className="page-container">
+
+<h2 className="page-title">Your Bookings</h2>
+
+{/* DRIVER BOOKINGS */}
+
+<h3>Driver Bookings</h3>
+
+<div className="cards-grid">
+
+{driverBookings.length===0 && (
+<p>No driver bookings</p>
+)}
+
+{driverBookings.map(b=>(
+
+<div className="card" key={b.id}>
+
+<div className="name">
+Driver: {b.driverName}
+</div>
+
+<p><b>Email:</b> {b.driverEmail}</p>
+
+<p><b>Date:</b> {b.date}</p>
+
+<p>
+<b>Status:</b>{" "}
+<span className={`status status-${b.status}`}>
+{b.status}
+</span>
+</p>
+
+<p><b>Payment Method:</b> {b.payment_method}</p>
+
+<p><b>Payment Status:</b> {b.payment_status || "pending"}</p>
+
+{b.notify_payment && (
+
+<p style={{color:"#f9a825"}}>
+⚠ Driver requested payment. Please pay the driver.
+</p>
+
+)}
+
+<p><b>Pickup Location:</b></p>
+
+<button
+className="btn btn-success"
+onClick={()=>window.open(`https://www.google.com/maps?q=${b.pickup_location}`)}
+>
+View Pickup Location
+</button>
+
+<div className="actions">
+
+<button
+className="btn btn-danger"
+onClick={()=>reportDriver(b.driver_id,b.id)}
+>
+Report Driver
+</button>
+
+{b.status==="completed" && (
+
+<button
+className="btn btn-warning"
+onClick={()=>deleteBooking(b.id)}
+>
+Delete Booking
+</button>
+
+)}
+
+</div>
+
+</div>
+
+))}
+
+</div>
+
+{/* VEHICLE BOOKINGS */}
+
+<h3 style={{marginTop:"40px"}}>Vehicle Bookings</h3>
+
+<div className="cards-grid">
+
+{vehicleBookings.length===0 && (
+<p>No vehicle bookings</p>
+)}
+
+{vehicleBookings.map(b=>(
+
+<div className="card" key={b.id}>
+
+<h3>{b.vehicleName}</h3>
+
+<p><b>Vehicle No:</b> {b.vehicle_number}</p>
+
+<p><b>Date:</b> {b.date}</p>
+
+<p><b>Status:</b> {b.status}</p>
+
+{b.distance_travelled &&(
+
+<p><b>Distance Travelled:</b> {b.distance_travelled} KM</p>
+
+)}
+
+{b.total_price &&(
+
+<p><b>Total Price:</b> ₹{b.total_price}</p>
+
+)}
+
+<p><b>Payment Method:</b> {b.payment_method || "Pending"}</p>
+
+<p><b>Payment Status:</b> {b.payment_status}</p>
+
+{b.notify_payment &&(
+
+<p style={{color:"#f9a825"}}>
+⚠ Owner requested payment
+</p>
+
+)}
+
+</div>
+
+))}
+
+</div>
+
+</div>
+
+)
+
 }

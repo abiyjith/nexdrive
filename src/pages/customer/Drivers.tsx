@@ -1,183 +1,196 @@
-import { useEffect, useState } from "react";
-import { supabase } from "../../lib/supabase";
-import DatePicker from "react-multi-date-picker";
+import { useEffect,useState } from "react"
+import {
+collection,
+getDocs,
+query,
+where,
+addDoc,
+getDoc,
+doc
+} from "firebase/firestore"
 
-type DriverProfile = {
-  user_id: string;
-  first_name: string;
-  last_name: string;
-};
+import { db } from "../../lib/firebase"
+import { useAuth } from "../../context/AuthContext"
+import MapPicker from "../../components/MapPicker"
+import "../../styles/ui.css"
 
-type DriverAvailability = {
-  driver_id: string;
-  available_date: string;
-};
+export default function Drivers(){
 
-export default function Drivers() {
-  const [selectedDates, setSelectedDates] = useState<any[]>([]);
-  const [drivers, setDrivers] = useState<DriverProfile[]>([]);
-  const [availabilityMap, setAvailabilityMap] = useState<
-    Record<string, string[]>
-  >({});
-  const [pickupLocation, setPickupLocation] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState<"cash" | "gpay">("cash");
-  const [message, setMessage] = useState("");
+const {user}=useAuth()
 
-  /* ================= SEARCH DRIVERS ================= */
-  const searchDrivers = async () => {
-    if (selectedDates.length === 0) {
-      setMessage("Please select at least one date");
-      return;
-    }
+const [drivers,setDrivers]=useState<any[]>([])
+const [date,setDate]=useState("")
+const [location,setLocation]=useState("")
 
-    setMessage("");
+useEffect(()=>{
+if(date) loadDrivers()
+},[date])
 
-    const dateStrings = selectedDates.map((d) => d.format("YYYY-MM-DD"));
+/* LOAD AVAILABLE DRIVERS */
 
-    // 1️⃣ Get matching availability (ANY matching date)
-    const { data: availability } = await supabase
-      .from("driver_availability")
-      .select("driver_id, available_date")
-      .in("available_date", dateStrings);
+const loadDrivers=async()=>{
 
-    if (!availability || availability.length === 0) {
-      setDrivers([]);
-      setMessage("No drivers available for selected dates");
-      return;
-    }
+if(!date) return
 
-    // 2️⃣ Unique driver IDs
-    const driverIds = [
-      ...new Set(availability.map((a) => a.driver_id)),
-    ];
+/* drivers available on this date */
 
-    // 3️⃣ Get driver profiles
-    const { data: profiles } = await supabase
-      .from("profiles")
-      .select("user_id, first_name, last_name")
-      .in("user_id", driverIds)
-      .eq("is_driver", true);
+const availSnap = await getDocs(
+query(
+collection(db,"driver_availability"),
+where("date","==",date)
+)
+)
 
-    setDrivers(profiles || []);
+const availableDriverIds = availSnap.docs.map(
+d=>d.data().driver_id
+)
 
-    // 4️⃣ Map availability per driver
-    const map: Record<string, string[]> = {};
-    availability.forEach((a: DriverAvailability) => {
-      if (!map[a.driver_id]) map[a.driver_id] = [];
-      map[a.driver_id].push(a.available_date);
-    });
+/* drivers already booked */
 
-    setAvailabilityMap(map);
-  };
+const bookingSnap = await getDocs(
+query(
+collection(db,"driver_bookings"),
+where("date","==",date)
+)
+)
 
-  /* ================= HIRE DRIVER ================= */
-  const hireDriver = async (driver: DriverProfile) => {
-    if (!pickupLocation) {
-      setMessage("Please enter pickup location");
-      return;
-    }
+const bookedDriverIds = bookingSnap.docs.map(
+d=>d.data().driver_id
+)
 
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+/* filter available drivers */
 
-    if (!user) return;
+const finalDrivers = availableDriverIds.filter(
+id => !bookedDriverIds.includes(id)
+)
 
-    const dates = selectedDates.map((d) => d.format("YYYY-MM-DD"));
-    const totalPrice = dates.length * 500; // temporary (can link driver price later)
+/* fetch driver info */
 
-    // 1️⃣ Insert hire
-    const { error } = await supabase.from("driver_hires").insert({
-      customer_id: user.id,
-      driver_id: driver.user_id,
-      start_date: dates[0],
-      end_date: dates[dates.length - 1],
-      status: "pending",
-      payment_status: "awaiting_confirmation",
-      payment_method: paymentMethod,
-      pickup_location: pickupLocation,
-      total_price: totalPrice,
-    });
+const list:any=[]
 
-    if (error) {
-      setMessage("Failed to hire driver");
-      return;
-    }
+for(const id of finalDrivers){
 
-    // 2️⃣ Remove ONLY hired dates
-    await supabase
-      .from("driver_availability")
-      .delete()
-      .eq("driver_id", driver.user_id)
-      .in("available_date", dates);
+const userSnap = await getDoc(doc(db,"users",id))
 
-    setMessage("Driver hired successfully");
-    setDrivers([]);
-    setSelectedDates([]);
-  };
+if(userSnap.exists()){
 
-  return (
-    <div style={{ padding: 20 }}>
-      <h2 style={{ color: "#facc15" }}>Find a Driver</h2>
+list.push({
+id,
+...userSnap.data()
+})
 
-      <DatePicker
-        multiple
-        minDate={new Date()}
-        value={selectedDates}
-        onChange={setSelectedDates}
-        format="YYYY-MM-DD"
-      />
+}
 
-      <br />
-      <button className="primary-btn" onClick={searchDrivers}>
-        Search Drivers
-      </button>
+}
 
-      <br /><br />
+setDrivers(list)
 
-      <input
-        placeholder="Pickup location (address or landmark)"
-        value={pickupLocation}
-        onChange={(e) => setPickupLocation(e.target.value)}
-        style={{ width: "100%", padding: 8 }}
-      />
+}
 
-      <br /><br />
+/* HIRE DRIVER */
 
-      <label><b>Payment Method</b></label>
-      <select
-        value={paymentMethod}
-        onChange={(e) => setPaymentMethod(e.target.value as any)}
-        style={{ marginLeft: 10 }}
-      >
-        <option value="cash">Cash</option>
-        <option value="gpay">GPay</option>
-      </select>
+const hireDriver=async(driver:any)=>{
 
-      {message && <p style={{ color: "#facc15" }}>{message}</p>}
+if(!date){
+alert("Select date")
+return
+}
 
-      <hr />
+if(!location){
+alert("Select pickup location")
+return
+}
 
-      {drivers.map((d) => (
-        <div key={d.user_id} className="hire-card">
-          <p>
-            <b>Name:</b> {d.first_name} {d.last_name}
-          </p>
+await addDoc(collection(db,"driver_bookings"),{
 
-          <p>
-            <b>Available Dates:</b>{" "}
-            {availabilityMap[d.user_id]?.join(", ")}
-          </p>
+driver_id:driver.id,
+customer_id:user?.uid,
+customer_email:user?.email,
 
-          <p>
-            <b>Total Price:</b> ₹{selectedDates.length * 500}
-          </p>
+date,
+pickup_location:location,
 
-          <button className="primary-btn" onClick={() => hireDriver(d)}>
-            Hire Driver
-          </button>
-        </div>
-      ))}
-    </div>
-  );
+driver_price: driver.driver_price_per_day || 0,
+
+payment_method:"",
+transaction_id:"",
+payment_status:"pending",
+
+notify_payment:false,
+status:"pending",
+
+created_at:new Date()
+
+})
+
+alert("Driver requested")
+
+loadDrivers()
+
+}
+
+return(
+
+<div className="page-container">
+
+<h2 className="page-title">Hire Drivers</h2>
+
+<div style={{marginBottom:"20px"}}>
+
+<label>Select Date</label>
+
+<input
+type="date"
+min={new Date().toISOString().split("T")[0]}
+value={date}
+onChange={(e)=>setDate(e.target.value)}
+/>
+
+</div>
+
+<h3>Select Pickup Location</h3>
+
+<MapPicker setLocation={setLocation}/>
+
+<div className="cards-grid" style={{marginTop:"30px"}}>
+
+{drivers.length===0 && (
+
+<p>No drivers available for this date</p>
+)}
+
+{drivers.map(driver=>(
+
+<div className="card" key={driver.id}>
+
+<div className="name">
+{driver.first_name}
+</div>
+
+<p>{driver.email}</p>
+
+<p>
+<b>Driver Price:</b>{" "}
+₹{driver.driver_price_per_day || "Not Set"} / day
+</p>
+
+<button
+className="btn btn-success"
+disabled={!date || !location}
+onClick={()=>hireDriver(driver)}
+
+>
+
+Hire Driver </button>
+
+</div>
+
+))}
+
+</div>
+
+</div>
+
+)
+
 }

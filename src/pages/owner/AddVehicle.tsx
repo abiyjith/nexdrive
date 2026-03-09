@@ -1,226 +1,224 @@
-import { useState } from "react";
-import { supabase } from "../../lib/supabase";
+import { useState } from "react"
+import { collection, addDoc, serverTimestamp } from "firebase/firestore"
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage"
 
-export default function AddVehicle() {
-  const [form, setForm] = useState({
-    vehicle_type: "",
-    brand: "",
-    model: "",
-    year: "",
-    vehicle_number: "",
-    price_per_day: "",
-    location_text: "",
-    latitude: "",
-    longitude: "",
-  });
+import { db, storage } from "../../lib/firebase"
+import { useAuth } from "../../context/AuthContext"
 
-  const [rcFile, setRcFile] = useState<File | null>(null);
-  const [vehicleImage, setVehicleImage] = useState<File | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
+import MapPicker from "../../components/MapPicker"
 
-  /* ================= USE CURRENT LOCATION ================= */
-  const detectLocation = () => {
-    if (!navigator.geolocation) {
-      setMessage("Geolocation not supported");
-      return;
-    }
+import "../../styles/owner.css"
 
-    setMessage("Detecting location...");
+export default function AddVehicle(){
 
-    navigator.geolocation.getCurrentPosition(
-      async (pos) => {
-        const lat = pos.coords.latitude;
-        const lng = pos.coords.longitude;
+const { user } = useAuth()
 
-        setForm({
-          ...form,
-          latitude: lat.toString(),
-          longitude: lng.toString(),
-          location_text: `Lat ${lat.toFixed(5)}, Lng ${lng.toFixed(5)}`,
-        });
+const [brand,setBrand] = useState("")
+const [model,setModel] = useState("")
+const [vehicleNumber,setVehicleNumber] = useState("")
 
-        setMessage("Location detected successfully");
-      },
-      () => setMessage("Location permission denied")
-    );
-  };
+const [fuel,setFuel] = useState("")
+const [year,setYear] = useState("")
 
-  /* ================= SUBMIT ================= */
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setMessage(null);
+const [price,setPrice] = useState("")
 
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+const [freeKm,setFreeKm] = useState("")
+const [extraPrice,setExtraPrice] = useState("")
 
-    if (!user || !rcFile || !form.latitude) {
-      setMessage("Please complete all required fields");
-      setLoading(false);
-      return;
-    }
+const [location,setLocation] = useState<any>(null)
 
-    const { data: vehicle, error } = await supabase
-      .from("vehicles")
-      .insert({
-        owner_id: user.id,
-        vehicle_type: form.vehicle_type,
-        brand: form.brand,
-        model: form.model,
-        year: Number(form.year),
-        vehicle_number: form.vehicle_number.toUpperCase(),
-        price_per_day: Number(form.price_per_day),
-        location_text: form.location_text,
-        latitude: Number(form.latitude),
-        longitude: Number(form.longitude),
-        verification_status: "pending",
-      })
-      .select()
-      .single();
+const [vehicleImage,setVehicleImage] = useState<File | null>(null)
+const [rcFile,setRcFile] = useState<File | null>(null)
 
-    if (error) {
-      setMessage(error.message);
-      setLoading(false);
-      return;
-    }
+const [loading,setLoading] = useState(false)
 
-    /* RC UPLOAD */
-    const rcPath = `${user.id}/vehicle-${vehicle.id}-rc`;
-    await supabase.storage
-      .from("licenses")
-      .upload(rcPath, rcFile, { upsert: true });
+const addVehicle = async()=>{
 
-    /* VEHICLE IMAGE UPLOAD */
-    if (vehicleImage) {
-      const imgPath = `vehicle-${vehicle.id}.jpg`;
-      await supabase.storage
-        .from("vehicle-images")
-        .upload(imgPath, vehicleImage, { upsert: true });
+if(!brand || !model || !vehicleNumber || !price || !fuel || !year){
+alert("Fill all fields")
+return
+}
 
-      await supabase
-        .from("vehicles")
-        .update({ image_url: imgPath })
-        .eq("id", vehicle.id);
-    }
+if(!freeKm || !extraPrice){
+alert("Enter free KM and extra price per KM")
+return
+}
 
-    await supabase
-      .from("vehicles")
-      .update({ rc_url: rcPath })
-      .eq("id", vehicle.id);
+if(!vehicleImage || !rcFile){
+alert("Upload vehicle image and RC")
+return
+}
 
-    setMessage("Vehicle added successfully. Awaiting admin approval.");
-    setLoading(false);
-  };
+if(!location){
+alert("Select vehicle location on map")
+return
+}
 
-  return (
-    <form onSubmit={handleSubmit} className="profile-card">
-      <h2>Add Vehicle</h2>
+try{
 
-      <input
-        placeholder="Vehicle Type (Car / Bike)"
-        value={form.vehicle_type}
-        onChange={(e) => setForm({ ...form, vehicle_type: e.target.value })}
-        required
-      />
+setLoading(true)
 
-      <input
-        placeholder="Brand (Honda, Hyundai...)"
-        value={form.brand}
-        onChange={(e) => setForm({ ...form, brand: e.target.value })}
-        required
-      />
+/* UPLOAD IMAGE */
 
-      <input
-        placeholder="Model"
-        value={form.model}
-        onChange={(e) => setForm({ ...form, model: e.target.value })}
-        required
-      />
+const imageRef = ref(
+storage,
+`vehicle_images/${user!.uid}_${Date.now()}`
+)
 
-      <input
-        placeholder="Year"
-        type="number"
-        value={form.year}
-        onChange={(e) => setForm({ ...form, year: e.target.value })}
-        required
-      />
+await uploadBytes(imageRef,vehicleImage)
+const vehicleImageURL = await getDownloadURL(imageRef)
 
-      <input
-        placeholder="Vehicle Number (TN09AB1234)"
-        value={form.vehicle_number}
-        onChange={(e) =>
-          setForm({ ...form, vehicle_number: e.target.value })
-        }
-        required
-      />
+/* UPLOAD RC */
 
-      <input
-        placeholder="Price Per Day (₹)"
-        type="number"
-        value={form.price_per_day}
-        onChange={(e) =>
-          setForm({ ...form, price_per_day: e.target.value })
-        }
-        required
-      />
+const rcRef = ref(
+storage,
+`vehicle_rc/${user!.uid}_${Date.now()}`
+)
 
-      {/* LOCATION */}
-      <div className="upload-group">
-        <label className="upload-label">Vehicle Location</label>
-        <p className="upload-hint">
-          Used to show your vehicle to nearby customers
-        </p>
+await uploadBytes(rcRef,rcFile)
+const rcURL = await getDownloadURL(rcRef)
 
-        <button type="button" onClick={detectLocation}>
-          📍 Use Current Location
-        </button>
+/* SAVE VEHICLE */
 
-        {form.location_text && (
-          <p style={{ marginTop: 6 }}>{form.location_text}</p>
-        )}
-      </div>
+await addDoc(collection(db,"vehicles"),{
 
-      {/* MAP PREVIEW */}
-      {form.latitude && (
-        <iframe
-          title="map"
-          width="100%"
-          height="220"
-          style={{ borderRadius: 8, marginTop: 10 }}
-          src={`https://maps.google.com/maps?q=${form.latitude},${form.longitude}&z=15&output=embed`}
-        />
-      )}
+owner_id:user!.uid,
 
-      {/* VEHICLE IMAGE */}
-      <div className="upload-group">
-        <label className="upload-label">Vehicle Photo</label>
-        <p className="upload-hint">Shown to customers</p>
-        <input
-          type="file"
-          accept="image/*"
-          onChange={(e) => setVehicleImage(e.target.files?.[0] || null)}
-        />
-      </div>
+brand,
+model,
+vehicle_number:vehicleNumber,
 
-      {/* RC */}
-      <div className="upload-group">
-        <label className="upload-label">RC Document</label>
-        <p className="upload-hint">For admin verification</p>
-        <input
-          type="file"
-          accept=".jpg,.png,.pdf"
-          onChange={(e) => setRcFile(e.target.files?.[0] || null)}
-          required
-        />
-      </div>
+fuel,
+year,
 
-      <button disabled={loading}>
-        {loading ? "Uploading..." : "Add Vehicle"}
-      </button>
+price_per_day:Number(price),
 
-      {message && <p>{message}</p>}
-    </form>
-  );
+free_km_per_day:Number(freeKm),
+extra_price_per_km:Number(extraPrice),
+
+location,
+
+vehicle_image:vehicleImageURL,
+vehicle_rc:rcURL,
+
+status:"pending",
+admin_message:"",
+
+is_available:false,
+
+created_at:serverTimestamp()
+
+})
+
+alert("Vehicle request submitted for admin approval")
+
+setBrand("")
+setModel("")
+setVehicleNumber("")
+setFuel("")
+setYear("")
+setPrice("")
+setFreeKm("")
+setExtraPrice("")
+setLocation(null)
+
+}catch(err){
+
+console.error(err)
+alert("Error submitting vehicle")
+
+}
+
+setLoading(false)
+
+}
+
+return(
+
+<div className="add-vehicle">
+
+<h2>Add Vehicle</h2>
+
+<input
+placeholder="Vehicle Brand"
+value={brand}
+onChange={e=>setBrand(e.target.value)}
+/>
+
+<input
+placeholder="Vehicle Model"
+value={model}
+onChange={e=>setModel(e.target.value)}
+/>
+
+<input
+placeholder="Vehicle Number Plate"
+value={vehicleNumber}
+onChange={e=>setVehicleNumber(e.target.value)}
+/>
+
+<input
+placeholder="Fuel Type"
+value={fuel}
+onChange={e=>setFuel(e.target.value)}
+/>
+
+<input
+placeholder="Manufacture Year"
+value={year}
+onChange={e=>setYear(e.target.value)}
+/>
+
+<input
+placeholder="Price Per Day"
+value={price}
+onChange={e=>setPrice(e.target.value)}
+/>
+
+<input
+placeholder="Free KM per Day (Example: 250)"
+value={freeKm}
+onChange={e=>setFreeKm(e.target.value)}
+/>
+
+<input
+placeholder="Extra Price per KM (Example: 12)"
+value={extraPrice}
+onChange={e=>setExtraPrice(e.target.value)}
+/>
+
+<h3>Select Vehicle Location</h3>
+
+<MapPicker setLocation={setLocation} />
+
+<label>Vehicle Image</label>
+
+<input
+type="file"
+accept="image/*"
+onChange={(e)=>setVehicleImage(e.target.files![0])}
+/>
+
+<label>Vehicle RC</label>
+
+<input
+type="file"
+accept="image/*,.pdf"
+onChange={(e)=>setRcFile(e.target.files![0])}
+/>
+
+<button
+className="primary-btn"
+onClick={addVehicle}
+disabled={loading}
+>
+
+{loading ? "Submitting..." : "Submit Vehicle"}
+
+</button>
+
+</div>
+
+)
+
 }

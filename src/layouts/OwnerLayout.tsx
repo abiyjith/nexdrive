@@ -1,36 +1,48 @@
-import { NavLink, Outlet, useNavigate } from "react-router-dom";
-import { supabase } from "../lib/supabase";
-import "../styles/customer.css";
+import { Link, Outlet } from "react-router-dom"
+import { useAuth } from "../context/AuthContext"
+import "../styles/navbar.css"
+import DashboardNavbar from "../components/DashboardNavbar"
 
-export default function OwnerLayout() {
-  const navigate = useNavigate();
+export default function OwnerLayout(){
+    return(
+    
+    <>
+    <DashboardNavbar/>
+    <Outlet/>
+    </>
+    
+    )
 
-  const logout = async () => {
-    await supabase.auth.signOut();
-    localStorage.clear();
-    navigate("/login");
-  };
+const { logout } = useAuth()
 
-  return (
-    <div className="customer-root">
-      <nav className="customer-navbar">
-        <div className="nav-logo">P2P Rentals (Owner)</div>
+return(
 
-        <div className="nav-links">
-          <NavLink to="/owner/dashboard">Dashboard</NavLink>
-          <NavLink to="/owner/yourvehicles">Your Vehicles</NavLink>
-          <NavLink to="/owner/addvehicle">Add Vehicle</NavLink> 
-         
-        </div>
+<div className="layout">
 
-        <button className="logout-btn" onClick={logout}>
-          Logout
-        </button>
-      </nav>
+<nav className="navbar">
 
-      <main className="customer-content">
-        <Outlet />
-      </main>
-    </div>
-  );
+<h2 className="logo">NexDrive</h2>
+
+<div className="nav-links">
+
+<Link to="/owner/dashboard">Dashboard</Link>
+<Link to="/owner/addvehicle">Add Vehicle</Link>
+<Link to="/owner/yourvehicles">Your Vehicles</Link>
+<Link to="/owner/bookings">Bookings</Link>
+
+<button className="btn btn-danger" onClick={logout}>
+Logout
+</button>
+</div>
+
+</nav>
+
+<div className="page-content">
+<Outlet/>
+</div>
+
+</div>
+
+)
+
 }
