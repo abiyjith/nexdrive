@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@800&display=swap');
+  body {
+    margin: 0; padding: 0; background: transparent;
+    display: flex; align-items: center; justify-content: center;
+    height: 100vh; overflow: hidden;
+  }
+  .logo-container {
+    display: flex; align-items: center; gap: 15px;
+  }
+  .icon {
+    font-size: 60px;
+    color: #3b82f6;
+    filter: drop-shadow(0 0 15px rgba(59, 130, 246, 0.8));
+    animation: pulse 2s infinite alternate ease-in-out;
+  }
+  .text {
+    font-family: 'Outfit', sans-serif;
+    font-size: 70px; font-weight: 800; letter-spacing: -1px;
+    background: linear-gradient(270deg, #3b82f6, #10b981, #a5b4fc, #3b82f6);
+    background-size: 300% 300%;
+    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+    animation: gradient-shift 3s ease infinite;
+  }
+  @keyframes pulse {
+    0% { transform: scale(0.95); filter: drop-shadow(0 0 10px rgba(59, 130, 246, 0.5)); color: #3b82f6; }
+    100% { transform: scale(1.05); filter: drop-shadow(0 0 25px rgba(16, 185, 129, 0.9)); color: #10b981; }
+  }
+  @keyframes gradient-shift {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
+</style>
+</head>
+<body>
+  <div class="logo-container">
+    <div class="icon">
+      <!-- Simple SVG Car Icon -->
+      <svg width="60" height="60" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+        <path d="M19.5 9.5L18.06 5.56C17.7 4.5 16.65 3.82 15.5 3.82H8.5C7.35 3.82 6.3 4.5 5.94 5.56L4.5 9.5C3.67 9.5 3 10.17 3 11V18.5C3 18.78 3.22 19 3.5 19H4.5C4.78 19 5 18.78 5 18.5V17.5H19V18.5C19 18.78 19.22 19 19.5 19H20.5C20.78 19 21 18.78 21 18.5V11C21 10.17 20.33 9.5 19.5 9.5ZM6.85 5.86C7.03 5.33 7.74 5 8.5 5H15.5C16.26 5 16.97 5.33 17.15 5.86L18.17 8.5H5.83L6.85 5.86ZM6.5 14.5C5.67 14.5 5 13.83 5 13C5 12.17 5.67 11.5 6.5 11.5C7.33 11.5 8 12.17 8 13C8 13.83 7.33 14.5 6.5 14.5ZM17.5 14.5C16.67 14.5 16 13.83 16 13C16 12.17 16.67 11.5 17.5 11.5C18.33 11.5 19 12.17 19 13C19 13.83 18.33 14.5 17.5 14.5Z"/>
+      </svg>
+    </div>
+    <div class="text">NexDrive</div>
+  </div>
+</body>
+</html>

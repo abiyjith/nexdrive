@@ -1,0 +1,127 @@
+/* ========== GLOBAL THEME ========== */
+html {
+  scroll-behavior: smooth;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: "Segoe UI", sans-serif;
+  background: var(--bg-dark, #0b0b0b);
+  color: var(--text-main, #ffffff);
+}
+
+/* ========== HEADINGS ========== */
+h1, h2, h3 {
+  color: #f1c40f;
+  margin-bottom: 10px;
+}
+
+/* ========== INPUTS ========== */
+input, select, textarea {
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 12px;
+  border-radius: 6px;
+  border: 1px solid var(--border-color, #333);
+  background: var(--bg-card, #111);
+  color: var(--text-main, #fff);
+}
+
+input:focus, textarea:focus, select:focus {
+  outline: none;
+  border-color: #f1c40f;
+}
+
+/* ========== BUTTONS ========== */
+button {
+  background: #f1c40f;
+  color: #000;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 6px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+button:hover {
+  opacity: 0.9;
+}
+
+button.danger {
+  background: #e74c3c;
+  color: #fff;
+}
+
+/* ========== LAYOUT ========== */
+.page {
+  padding: 30px;
+  max-width: 1200px;
+  margin: auto;
+}
+
+/* ========== CARDS ========== */
+.card {
+  background: var(--bg-card, #111);
+  border-radius: 10px;
+  padding: 18px;
+  border: 1px solid var(--border-color, #222);
+  margin-bottom: 20px;
+}
+
+/* ========== GRID ========== */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px;
+}
+
+/* ========== STATUS BADGES ========== */
+.badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.badge.pending {
+  background: orange;
+  color: #000;
+}
+
+.badge.approved {
+  background: #2ecc71;
+  color: #000;
+}
+
+.badge.rejected {
+  background: #e74c3c;
+  color: #fff;
+}
+
+/* ========== ALERTS ========== */
+.alert {
+  padding: 12px;
+  border-radius: 6px;
+  margin-bottom: 15px;
+}
+
+.alert.success {
+  background: rgba(46, 204, 113, 0.15);
+  border-left: 5px solid #2ecc71;
+}
+
+.alert.error {
+  background: rgba(231, 76, 60, 0.15);
+  border-left: 5px solid #e74c3c;
+}
+
+.alert.info {
+  background: rgba(52, 152, 219, 0.15);
+  border-left: 5px solid #3498db;
+}
+

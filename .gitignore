@@ -1,0 +1,6 @@
+node_modules/
+mail-server/node_modules/
+dist/
+.env
+mail-server/.env
+.DS_Store
