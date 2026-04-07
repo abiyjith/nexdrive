@@ -22,7 +22,7 @@ import CustomerBookings from "./pages/customer/Bookings"
 /* DRIVER */
 import DriverLayout from "./layouts/DriverLayout"
 import DriverDashboard from "./pages/dashboards/Driver"
-import DriverProfile from "./pages/driver/profile"
+import DriverProfile from "./pages/driver/Profile"
 import DriverHires from "./pages/driver/Hires"
 
 /* OWNER */
